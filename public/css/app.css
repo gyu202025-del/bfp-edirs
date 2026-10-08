@@ -1,0 +1,155 @@
+/* =========================================================
+   BFP Web GIS Emergency Dispatch System — Design Tokens
+   ========================================================= */
+:root {
+  --primary: #C62828;      /* Fire Red */
+  --secondary: #1B263B;    /* Dark Navy */
+  --accent: #FFC107;       /* Gold */
+  --bg: #F5F7FA;
+  --sidebar-bg: #182433;
+  --card-bg: #FFFFFF;
+  --success: #2E7D32;
+  --warning: #FF9800;
+  --danger: #E53935;
+  --text-muted: #6B7280;
+  --border: #E4E7EC;
+
+  --font-body: 'Poppins', 'Segoe UI', sans-serif;
+  --radius: 10px;
+  --shadow: 0 2px 8px rgba(27,38,59,.08);
+}
+
+body { font-family: var(--font-body); background: var(--bg); color: var(--secondary); }
+h1,h2,h3,h4,h5,h6 { font-family: var(--font-body); font-weight: 600; }
+
+/* ---------- Top Navbar (full width, fixed) ---------- */
+.topnav {
+  height: 64px;
+  background: #fff;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 1.25rem;
+  position: fixed; top: 0; left: 0; right: 0; z-index: 1030;
+}
+.topnav .nav-left { display: flex; align-items: center; gap: 1rem; }
+.topnav .menu-toggle { border: none; background: none; font-size: 1.3rem; color: var(--secondary); }
+.topnav .datetime { font-size: .82rem; color: var(--text-muted); line-height: 1.2; }
+.topnav .datetime strong { color: var(--secondary); display: block; font-size: .85rem; }
+.topnav .nav-right { display: flex; align-items: center; gap: 1.1rem; }
+.topnav .icon-btn { position: relative; background: none; border: none; font-size: 1.15rem; color: var(--secondary); }
+.topnav .icon-btn .badge-dot {
+  position: absolute; top: -4px; right: -6px;
+  background: var(--primary); color: #fff; font-size: .6rem;
+  border-radius: 999px; padding: 1px 5px; line-height: 1.2;
+}
+.topnav .user-chip { display: flex; align-items: center; gap: .6rem; cursor: pointer; }
+.topnav .user-chip .avatar { width: 34px; height: 34px; border-radius: 50%; background: var(--secondary); }
+.topnav .user-chip .name { font-size: .85rem; font-weight: 600; line-height: 1.1; }
+.topnav .user-chip .role { font-size: .72rem; color: var(--text-muted); }
+
+/* ---------- Sidebar ---------- */
+.sidebar {
+  position: fixed; top: 64px; bottom: 0; left: 0;
+  width: 260px;
+  background: var(--sidebar-bg);
+  color: #C7CCD6;
+  overflow-y: auto;
+  z-index: 1020;
+  transition: width .2s ease, left .2s ease;
+}
+.sidebar.collapsed { width: 76px; }
+.sidebar .brand { display: flex; align-items: center; gap: .7rem; padding: 1.15rem 1.1rem; border-bottom: 1px solid rgba(255,255,255,.08); }
+.sidebar .brand .logo { width: 38px; height: 38px; border-radius: 8px; background: var(--primary); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:.8rem; flex-shrink:0; }
+.sidebar .brand .title { font-size: .85rem; font-weight: 600; color: #fff; line-height: 1.2; }
+.sidebar.collapsed .brand .title { display: none; }
+
+.sidebar nav { padding: .75rem .6rem; }
+.sidebar .nav-link {
+  display: flex; align-items: center; gap: .75rem;
+  padding: .6rem .75rem; border-radius: 8px; color: #C7CCD6;
+  font-size: .875rem; font-weight: 500; margin-bottom: .2rem;
+  border-left: 3px solid transparent;
+  transition: background .15s ease, color .15s ease;
+}
+.sidebar .nav-link:hover { background: rgba(255,255,255,.06); color: #fff; }
+.sidebar .nav-link.active { background: rgba(198,40,40,.22); color: #fff; border-left-color: var(--primary); }
+.sidebar .nav-link i { width: 18px; text-align: center; }
+.sidebar.collapsed .nav-link span { display: none; }
+
+.sidebar .logout-link { color: var(--danger); }
+
+/* ---------- App shell offsets ---------- */
+.app-main { margin-left: 260px; margin-top: 64px; padding: 1.5rem; transition: margin-left .2s ease; }
+.app-main.expanded { margin-left: 76px; }
+@media (max-width: 992px) {
+  .sidebar { left: -260px; }
+  .sidebar.open { left: 0; }
+  .app-main { margin-left: 0; }
+}
+
+/* ---------- Cards ---------- */
+.card-flat { background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); }
+.stat-card { background: var(--card-bg); border-radius: var(--radius); box-shadow: var(--shadow); padding: 1.1rem 1.25rem; display:flex; justify-content:space-between; align-items:flex-start; }
+.stat-card .stat-value { font-size: 1.7rem; font-weight: 700; line-height: 1; }
+.stat-card .stat-label { font-size: .8rem; color: var(--text-muted); margin-top: .35rem; }
+.stat-card .stat-icon { width: 42px; height: 42px; border-radius: 10px; display:flex; align-items:center; justify-content:center; font-size: 1.1rem; }
+
+/* ---------- Status badges ---------- */
+.status-pill { display:inline-flex; align-items:center; gap:.4rem; padding:.3rem .65rem; border-radius:999px; font-size:.74rem; font-weight:600; }
+.status-pending    { background:#FFF3CD; color:#8A6D00; }
+.status-verified   { background:#E3E0FA; color:#5B4BB8; }
+.status-dispatched { background:#DCEBFF; color:#1565C0; }
+.status-responding { background:#FDE0DE; color:var(--primary); }
+.status-resolved   { background:#E1F3E5; color:var(--success); }
+.status-cancelled  { background:#F3E6E6; color:var(--danger); }
+/* Dispatch-specific 4-state palette per spec */
+.dispatch-pending    { background:#FFF3CD; color:#8A6D00; }
+.dispatch-responding { background:#DCEBFF; color:#1565C0; }
+.dispatch-completed   { background:#E1F3E5; color:var(--success); }
+.dispatch-cancelled  { background:#F3E6E6; color:var(--danger); }
+
+/* ---------- Tables ---------- */
+.table-clean thead th { font-size:.72rem; text-transform:uppercase; letter-spacing:.05em; color:var(--text-muted); border-bottom:1px solid var(--border); padding:.75rem .9rem; }
+.table-clean tbody td { padding:.8rem .9rem; border-bottom:1px solid var(--border); font-size:.875rem; vertical-align:middle; }
+.table-clean tbody tr:hover { background:#FAFAFB; }
+.mono { font-family: 'IBM Plex Mono', Consolas, monospace; font-size:.8rem; }
+
+/* ---------- Buttons ---------- */
+.btn-primary-fire { background: var(--primary); border-color: var(--primary); color:#fff; }
+.btn-primary-fire:hover { background:#A31F1F; border-color:#A31F1F; color:#fff; }
+
+/* ---------- Login / Glassmorphism ---------- */
+.login-shell {
+  min-height: 100vh; display: flex;
+  background: linear-gradient(135deg, rgba(27,38,59,.92), rgba(198,40,40,.85)),
+              url('/images/firetruck-gis-bg.jpg') center/cover no-repeat;
+}
+.login-visual { flex: 1.1; position: relative; display:flex; flex-direction:column; justify-content:flex-end; padding: 3rem; color:#fff; }
+.login-visual::after {
+  content:''; position:absolute; inset:0;
+  background-image: linear-gradient(rgba(255,255,255,.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.05) 1px, transparent 1px);
+  background-size: 40px 40px; pointer-events:none;
+}
+.login-panel { flex-shrink:0; width: 440px; display:flex; align-items:center; justify-content:center; padding: 2rem; }
+.glass-card {
+  width: 100%; max-width: 360px;
+  background: rgba(255,255,255,.14);
+  border: 1px solid rgba(255,255,255,.25);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-radius: 16px;
+  padding: 2.25rem 2rem;
+  color: #fff;
+  box-shadow: 0 8px 32px rgba(0,0,0,.25);
+}
+.glass-card .form-control {
+  background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.3); color: #fff;
+}
+.glass-card .form-control::placeholder { color: rgba(255,255,255,.6); }
+.glass-card .form-control:focus { background: rgba(255,255,255,.18); border-color: var(--accent); color:#fff; box-shadow:none; }
+@media (max-width: 900px) { .login-visual { display:none; } .login-panel { width:100%; } }
+
+/* ---------- Fire station cards ---------- */
+.station-card { background: var(--card-bg); border-radius: var(--radius); box-shadow: var(--shadow); padding: 1.1rem; }
+.station-card .station-status-dot { width:8px; height:8px; border-radius:50%; display:inline-block; margin-right:.3rem; }
+</style>
