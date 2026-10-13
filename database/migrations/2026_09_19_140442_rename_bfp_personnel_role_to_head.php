@@ -1,4 +1,3 @@
-
 <?php
 
 use Illuminate\Database\Migrations\Migration;
@@ -8,57 +7,29 @@ return new class extends Migration
 {
     public function up(): void
     {
-        $driver = DB::connection()->getDriverName();
-
-        if ($driver === 'mysql') {
-            // Allow both old and new role values temporarily.
-            DB::statement(
-                "ALTER TABLE users MODIFY role
-                ENUM('Administrator', 'BFP Personnel', 'Head', 'Citizen')
-                NOT NULL DEFAULT 'Citizen'"
-            );
+        // Only MySQL has a real ENUM column to change.
+        if (DB::getDriverName() !== 'mysql') {
+            return;
         }
 
-        // Convert existing BFP Personnel accounts to Head.
-        DB::table('users')
-            ->where('role', 'BFP Personnel')
-            ->update(['role' => 'Head']);
+        // Step 1: widen the enum so both old and new values are valid
+        DB::statement("ALTER TABLE users MODIFY role ENUM('Administrator', 'BFP Personnel', 'Head', 'Citizen') NOT NULL DEFAULT 'Citizen'");
 
-        if ($driver === 'mysql') {
-            // Remove the old role value from the ENUM.
-            DB::statement(
-                "ALTER TABLE users MODIFY role
-                ENUM('Administrator', 'Head', 'Citizen')
-                NOT NULL DEFAULT 'Citizen'"
-            );
-        }
+        // Step 2: convert existing data
+        DB::table('users')->where('role', 'BFP Personnel')->update(['role' => 'Head']);
+
+        // Step 3: narrow the enum, dropping the old value
+        DB::statement("ALTER TABLE users MODIFY role ENUM('Administrator', 'Head', 'Citizen') NOT NULL DEFAULT 'Citizen'");
     }
 
     public function down(): void
     {
-        $driver = DB::connection()->getDriverName();
-
-        if ($driver === 'mysql') {
-            // Temporarily allow both role values for rollback.
-            DB::statement(
-                "ALTER TABLE users MODIFY role
-                ENUM('Administrator', 'BFP Personnel', 'Head', 'Citizen')
-                NOT NULL DEFAULT 'Citizen'"
-            );
+        if (DB::getDriverName() !== 'mysql') {
+            return;
         }
 
-        // Restore the original role value.
-        DB::table('users')
-            ->where('role', 'Head')
-            ->update(['role' => 'BFP Personnel']);
-
-        if ($driver === 'mysql') {
-            // Restore the original ENUM values.
-            DB::statement(
-                "ALTER TABLE users MODIFY role
-                ENUM('Administrator', 'BFP Personnel', 'Citizen')
-                NOT NULL DEFAULT 'Citizen'"
-            );
-        }
+        DB::statement("ALTER TABLE users MODIFY role ENUM('Administrator', 'BFP Personnel', 'Head', 'Citizen') NOT NULL DEFAULT 'Citizen'");
+        DB::table('users')->where('role', 'Head')->update(['role' => 'BFP Personnel']);
+        DB::statement("ALTER TABLE users MODIFY role ENUM('Administrator', 'BFP Personnel', 'Citizen') NOT NULL DEFAULT 'Citizen'");
     }
 };

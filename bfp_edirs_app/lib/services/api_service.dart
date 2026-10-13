@@ -7,7 +7,7 @@ class ApiService {
   // Change this to your laptop's local IP (not 127.0.0.1) when testing on
   // a real phone over WiFi — e.g. 'http://192.168.1.5:8000/api'.
   // Use 'http://10.0.2.2:8000/api' if testing on the Android EMULATOR instead.
-  static const String baseUrl = 'http://192.168.100.17:8000/api';
+  static const String baseUrl = 'https://bfp-edirs-production.up.railway.app/api';
 
   static Future<List<IncidentCategory>> fetchCategories() async {
     final res = await http.get(Uri.parse('$baseUrl/report/categories'));
