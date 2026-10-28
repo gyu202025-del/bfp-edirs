@@ -314,7 +314,13 @@
             document.getElementById('liveIndicator').innerHTML = '<span class="status-dot" style="background:currentColor;"></span> Connection lost';
         }
     }
-
+      
+    // Focus the map when opened from the new-report board (?lat=..&lng=..)
+const focusParams = new URLSearchParams(location.search);
+if (focusParams.has('lat') && focusParams.has('lng')) {
+    const fLat = parseFloat(focusParams.get('lat')), fLng = parseFloat(focusParams.get('lng'));
+    if (!isNaN(fLat) && !isNaN(fLng)) liveMap.setView([fLat, fLng], 17);
+}
     fetchIncidents();
     setInterval(fetchIncidents, 10000); // poll every 10 seconds
 
@@ -322,5 +328,6 @@
     document.getElementById('categoryFilter').addEventListener('change', renderMarkers);
     document.getElementById('todayToggle').addEventListener('change', renderMarkers);
     document.getElementById('showReportsToggle').addEventListener('change', renderMarkers);
+
 </script>
 @endpush

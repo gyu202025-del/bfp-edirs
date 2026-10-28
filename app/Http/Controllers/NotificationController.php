@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Notification;
+use Carbon\Carbon;
 
 class NotificationController extends Controller
 {
@@ -22,12 +23,31 @@ class NotificationController extends Controller
             ->with('incident')
             ->latest('created_at')
             ->get()
-            ->map(fn ($n) => [
-                'id' => $n->id,
-                'title' => $n->title,
-                'message' => $n->message,
-                'category' => $n->incident->category ?? null,
-            ]);
+            ->map(function ($n) {
+                $i = $n->incident;
+
+                return [
+                    'id'       => $n->id,
+                    'title'    => $n->title,
+                    'message'  => $n->message,
+                    'category' => $i->category ?? null,
+                    'incident' => $i ? [
+                        'id'               => $i->id,
+                        'incident_number'  => $i->incident_number,
+                        'category'         => $i->category,
+                        'status'           => $i->status,
+                        'reported_at'      => Carbon::parse($i->reported_at ?? $i->created_at)->format('M d, Y h:i A'),
+                        'municipality'     => $i->municipality,
+                        'barangay'         => $i->barangay,
+                        'landmark'         => $i->landmark,
+                        'description'      => $i->description,
+                        'reporter_name'    => $i->reporter_name,
+                        'reporter_contact' => $i->reporter_contact,
+                        'latitude'         => $i->latitude,
+                        'longitude'        => $i->longitude,
+                    ] : null,
+                ];
+            });
 
         return response()->json($notifications);
     }
@@ -42,7 +62,7 @@ class NotificationController extends Controller
             $notification->incident->attemptAutoDispatch();
         }
 
-        return back();
+        return request()->expectsJson() ? response()->json(['ok' => true]) : back();
     }
 
     public function markAllRead()
@@ -60,6 +80,6 @@ class NotificationController extends Controller
 
         Notification::where('user_id', auth()->id())->update(['status' => 'Read']);
 
-        return back();
+        return request()->expectsJson() ? response()->json(['ok' => true]) : back();
     }
 }
