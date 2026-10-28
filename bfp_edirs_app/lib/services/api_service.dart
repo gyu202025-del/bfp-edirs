@@ -16,6 +16,14 @@ class ApiService {
     return data.map((e) => IncidentCategory.fromJson(e)).toList();
   }
 
+  static Future<List<String>> fetchBarangays(String municipality) async {
+  final res = await http
+      .get(Uri.parse('$baseUrl/report/barangays').replace(queryParameters: {'municipality': municipality}))
+      .timeout(const Duration(seconds: 10));
+  if (res.statusCode != 200) return [];
+  return (jsonDecode(res.body) as List).map((e) => e.toString()).toList();
+}
+
   static Future<List<String>> fetchMunicipalities() async {
     final res = await http.get(Uri.parse('$baseUrl/report/municipalities'));
     if (res.statusCode != 200) throw Exception('Failed to load municipalities');

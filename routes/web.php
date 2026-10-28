@@ -10,6 +10,8 @@ use App\Http\Controllers\DispatchController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\AssistanceRequestController;
+use App\Http\Controllers\AnalyticsReportController;
+use App\Http\Controllers\UserManagementController;
 
 
 Route::get('/', fn () => redirect('/login'));
@@ -26,7 +28,6 @@ Route::middleware('guest')->group(function () {
 Route::post('/logout', [LoginController::class, 'destroy'])->middleware('auth')->name('logout');
 
 // Authenticated routes, shared by all roles
-
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/gis-map', [GisMapController::class, 'index'])->name('gis.map');
@@ -38,31 +39,39 @@ Route::middleware('auth')->group(function () {
     Route::post('/notifications/read-all', [NotificationController::class, 'markAllRead'])->name('notifications.markAllRead');
 });
 
-// Administrator + BFP Personnel — operational modules
+// Administrator + Head — operational modules
 Route::middleware(['auth', 'role:Administrator,Head'])->group(function () {
+    // Incidents
     Route::get('/incidents', [IncidentController::class, 'index'])->name('incidents.index');
     Route::post('/incidents/{incident}/verify', [IncidentController::class, 'verify'])->name('incidents.verify');
     Route::post('/incidents/{incident}/cancel', [IncidentController::class, 'cancel'])->name('incidents.cancel');
     Route::post('/incidents/{incident}/request-assistance', [AssistanceRequestController::class, 'store'])->name('assistance.request');
     Route::get('/incidents/{incident}/nearby-stations', [IncidentController::class, 'nearbyStations'])->name('incidents.nearbyStations');
-     
-   
 
+    // Dispatches
     Route::get('/dispatches', [DispatchController::class, 'index'])->name('dispatches.index');
-Route::post('/dispatches', [DispatchController::class, 'store'])->name('dispatches.store');
-Route::post('/dispatches/{dispatch}/complete', [DispatchController::class, 'complete'])->name('dispatches.complete');
-Route::post('/dispatches/{dispatch}/assign-officer', [DispatchController::class, 'assignOfficer'])->name('dispatches.assignOfficer');
+    Route::post('/dispatches', [DispatchController::class, 'store'])->name('dispatches.store');
+    Route::post('/dispatches/{dispatch}/complete', [DispatchController::class, 'complete'])->name('dispatches.complete');
+    Route::post('/dispatches/{dispatch}/assign-officer', [DispatchController::class, 'assignOfficer'])->name('dispatches.assignOfficer');
 
-Route::get('/firestations', fn () => view('firestations.index'))->name('firestations.index');
-    Route::get('/reports', fn () => view('reports.index'))->name('reports.index');
+    // Fire stations + reports
+    Route::get('/firestations', fn () => view('firestations.index'))->name('firestations.index');
+    Route::get('/reports', [AnalyticsReportController::class, 'index'])->name('reports.index');
+
+    // User management (Admin: everyone, Head: own municipality only; enforced in the controller)
+    Route::get('/users', [UserManagementController::class, 'index'])->name('users.index');
+    Route::post('/users', [UserManagementController::class, 'store'])->name('users.store');
+    Route::put('/users/{user}', [UserManagementController::class, 'update'])->name('users.update');
+    Route::post('/users/{user}/toggle-status', [UserManagementController::class, 'toggleStatus'])->name('users.toggle');
+    Route::post('/users/{user}/reset-password', [UserManagementController::class, 'resetPassword'])->name('users.resetPassword');
 });
 
 // Administrator only
 Route::middleware(['auth', 'role:Administrator'])->group(function () {
-    Route::get('/users', fn () => view('users.index'))->name('users.index');
     Route::get('/settings', fn () => view('settings.index'))->name('settings.index');
 });
 
+// Public citizen reporting
 Route::get('/report', [ReportController::class, 'select'])->name('report.select');
 Route::get('/report/{category}', [ReportController::class, 'create'])->name('report.create');
 Route::post('/report', [ReportController::class, 'store'])->name('report.store');
