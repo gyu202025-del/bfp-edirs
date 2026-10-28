@@ -31,8 +31,6 @@ class ReportApiController extends Controller
             'category' => 'required|in:Fire,Medical,Crime/Security,Accident',
             'municipality' => 'required|string|max:255',
             'barangay' => 'required|string|max:255',
-            'reporter_name' => 'nullable|string|max:255',
-            'reporter_contact' => 'nullable|string|max:20',
             'landmark' => 'nullable|string|max:255',
             'description' => 'required|string',
             'latitude' => 'required|numeric',
@@ -40,9 +38,7 @@ class ReportApiController extends Controller
             'image' => 'nullable|image|max:5120',
         ]);
 
-        $data['incident_number'] = 'INC-' . now()->format('Y') . '-' . str_pad((Incident::count() + 1), 4, '0', STR_PAD_LEFT);
         $data['incident_type'] = $data['category'];
-        $data['report_source'] = 'Mobile App';
         $data['status'] = 'Pending';
         $data['reported_at'] = now();
 
@@ -59,14 +55,15 @@ class ReportApiController extends Controller
                 'user_id' => $recipient->id,
                 'incident_id' => $incident->id,
                 'title' => 'New ' . $incident->category . ' Report',
-                'message' => $incident->incident_number . ' — ' . ($incident->landmark ?: $incident->barangay) . ', ' . $incident->municipality,
+                'message' => 'Incident #' . $incident->display_number . ' — ' . ($incident->landmark ?: $incident->location_text),
                 'status' => 'Unread',
             ]);
         }
 
         return response()->json([
             'success' => true,
-            'incident_number' => $incident->incident_number,
+            // String on purpose: the app's confirmation screen expects text, not a number
+            'incident_number' => (string) $incident->display_number,
             'message' => 'Report submitted successfully.',
         ], 201);
     }

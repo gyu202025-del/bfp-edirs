@@ -7,6 +7,8 @@ class ConfirmationScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final hasNumber = incidentNumber.trim().isNotEmpty && incidentNumber != 'null';
+
     return Scaffold(
       body: Center(
         child: Padding(
@@ -19,8 +21,13 @@ class ConfirmationScreen extends StatelessWidget {
               const Text('Report Sent', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600)),
               const SizedBox(height: 8),
               const Text('Your report has been received and is being reviewed.', textAlign: TextAlign.center),
-              const SizedBox(height: 8),
-              Text(incidentNumber, style: const TextStyle(fontFamily: 'monospace', color: Colors.grey)),
+              if (hasNumber) ...[
+                const SizedBox(height: 16),
+                Text(
+                  'Incident #$incidentNumber',
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                ),
+              ],
               const SizedBox(height: 24),
               SizedBox(
                 width: double.infinity,

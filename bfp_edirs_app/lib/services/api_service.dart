@@ -48,8 +48,6 @@ class ApiService {
     required double latitude,
     required double longitude,
     String? landmark,
-    String? reporterName,
-    String? reporterContact,
     File? image,
   }) async {
     final uri = Uri.parse('$baseUrl/report');
@@ -63,8 +61,6 @@ class ApiService {
     request.fields['latitude'] = latitude.toString();
     request.fields['longitude'] = longitude.toString();
     if (landmark != null) request.fields['landmark'] = landmark;
-    if (reporterName != null) request.fields['reporter_name'] = reporterName;
-    if (reporterContact != null) request.fields['reporter_contact'] = reporterContact;
 
     if (image != null) {
       request.files.add(await http.MultipartFile.fromPath('image', image.path));

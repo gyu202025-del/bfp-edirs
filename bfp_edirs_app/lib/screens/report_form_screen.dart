@@ -30,8 +30,6 @@ class _ReportFormScreenState extends State<ReportFormScreen> {
 
   final _descriptionController = TextEditingController();
   final _landmarkController = TextEditingController();
-  final _nameController = TextEditingController();
-  final _contactController = TextEditingController();
   final _barangayController = TextEditingController();
 
   List<String> municipalities = [];
@@ -154,19 +152,21 @@ class _ReportFormScreenState extends State<ReportFormScreen> {
         latitude: point!.latitude,
         longitude: point!.longitude,
         landmark: _landmarkController.text.trim().isEmpty ? null : _landmarkController.text.trim(),
-        reporterName: _nameController.text.trim().isEmpty ? null : _nameController.text.trim(),
-        reporterContact: _contactController.text.trim().isEmpty ? null : _contactController.text.trim(),
         image: image,
       );
 
       if (!mounted) return;
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => ConfirmationScreen(incidentNumber: result['incident_number'])),
+        MaterialPageRoute(
+          builder: (_) => ConfirmationScreen(
+            incidentNumber: (result['incident_number'] ?? result['id'] ?? '').toString(),
+          ),
+        ),
       );
-    } catch (_) {
+    } catch (e) {
       if (mounted) setState(() => submitting = false);
-      _snack('Failed to submit: could not reach the server.');
+      _snack('Failed to submit: $e');
     }
   }
 
@@ -307,24 +307,6 @@ class _ReportFormScreenState extends State<ReportFormScreen> {
             TextField(
               controller: _landmarkController,
               decoration: const InputDecoration(labelText: 'Nearby Landmark', border: OutlineInputBorder()),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _nameController,
-                    decoration: const InputDecoration(labelText: 'Your Name', border: OutlineInputBorder()),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: TextField(
-                    controller: _contactController,
-                    decoration: const InputDecoration(labelText: 'Contact Number', border: OutlineInputBorder()),
-                  ),
-                ),
-              ],
             ),
             const SizedBox(height: 16),
             OutlinedButton.icon(
