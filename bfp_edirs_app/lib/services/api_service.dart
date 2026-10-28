@@ -9,23 +9,32 @@ class ApiService {
   // Use 'http://10.0.2.2:8000/api' if testing on the Android EMULATOR instead.
   static const String baseUrl = 'https://bfp-edirs-production.up.railway.app/api';
 
+  static const Map<String, String> _jsonHeaders = {'Accept': 'application/json'};
+
   static Future<List<IncidentCategory>> fetchCategories() async {
-    final res = await http.get(Uri.parse('$baseUrl/report/categories'));
+    final res = await http
+        .get(Uri.parse('$baseUrl/report/categories'), headers: _jsonHeaders)
+        .timeout(const Duration(seconds: 15));
     if (res.statusCode != 200) throw Exception('Failed to load categories');
     final List data = jsonDecode(res.body);
     return data.map((e) => IncidentCategory.fromJson(e)).toList();
   }
 
   static Future<List<String>> fetchBarangays(String municipality) async {
-  final res = await http
-      .get(Uri.parse('$baseUrl/report/barangays').replace(queryParameters: {'municipality': municipality}))
-      .timeout(const Duration(seconds: 10));
-  if (res.statusCode != 200) return [];
-  return (jsonDecode(res.body) as List).map((e) => e.toString()).toList();
-}
+    final res = await http
+        .get(
+          Uri.parse('$baseUrl/report/barangays').replace(queryParameters: {'municipality': municipality}),
+          headers: _jsonHeaders,
+        )
+        .timeout(const Duration(seconds: 15));
+    if (res.statusCode != 200) return [];
+    return (jsonDecode(res.body) as List).map((e) => e.toString()).toList();
+  }
 
   static Future<List<String>> fetchMunicipalities() async {
-    final res = await http.get(Uri.parse('$baseUrl/report/municipalities'));
+    final res = await http
+        .get(Uri.parse('$baseUrl/report/municipalities'), headers: _jsonHeaders)
+        .timeout(const Duration(seconds: 15));
     if (res.statusCode != 200) throw Exception('Failed to load municipalities');
     final List data = jsonDecode(res.body);
     return data.cast<String>();
@@ -45,6 +54,7 @@ class ApiService {
   }) async {
     final uri = Uri.parse('$baseUrl/report');
     final request = http.MultipartRequest('POST', uri);
+    request.headers['Accept'] = 'application/json';
 
     request.fields['category'] = category;
     request.fields['municipality'] = municipality;
@@ -60,13 +70,13 @@ class ApiService {
       request.files.add(await http.MultipartFile.fromPath('image', image.path));
     }
 
-    final streamedResponse = await request.send();
+    final streamedResponse = await request.send().timeout(const Duration(seconds: 60));
     final response = await http.Response.fromStream(streamedResponse);
 
     if (response.statusCode == 201) {
       return jsonDecode(response.body);
     } else {
-      throw Exception('Submit failed: ${response.body}');
+      throw Exception('Submit failed (${response.statusCode}): ${response.body}');
     }
   }
 }
