@@ -90,8 +90,8 @@
     <div class="map-filter-bar">
         <select class="form-select form-select-sm" style="width:auto;" id="statusFilter">
             <option value="">All statuses</option>
-            <option>Pending</option><option>Verified</option><option>Dispatched</option>
-            <option>Responding</option><option>Resolved</option><option>Cancelled</option>
+            <option>Pending</option><option>Dispatched</option>
+            <option>Resolved</option><option>Cancelled</option>
         </select>
         <select class="form-select form-select-sm" style="width:auto;" id="categoryFilter">
             <option value="">All categories</option>
@@ -124,7 +124,7 @@
         <div class="fw-semibold mb-1" style="font-size:.75rem;">Marker stage</div>
         <div class="d-flex flex-column gap-1">
             <div><span class="legend-swatch" style="background:#888;"></span> Pending — pulsing dot</div>
-            <div>🔥 Verified onward — icon shown</div>
+            <div>🔥 Dispatched onward — icon shown</div>
         </div>
     </div>
 </div>
@@ -187,7 +187,7 @@
         'Crime/Security': '🚓',
         'Accident': '⚠️',
     };
-    const statusColors = { pending: '#B7791E', verified: '#6941C6', dispatched: '#175CD3', responding: '#B3251A', resolved: '#067647', cancelled: '#667085' };
+    const statusColors = { pending: '#B7791E', dispatched: '#175CD3', resolved: '#067647', cancelled: '#667085' };
 
     function makeIcon(category, status) {
         const bg = categoryColors[category] || '#667085';
@@ -268,7 +268,7 @@
                 }).addTo(liveMap);
                 marker.bindPopup(`
                     <strong>${i.label}</strong><br>
-                    <span style="text-transform:capitalize;color:${statusColors[i.status]}">${i.status}</span>
+                    <span style="text-transform:capitalize;color:${statusColors[i.status] || '#667085'}">${i.status}</span>
                     <div class="popup-report-date">🕒 ${formatReportDate(i.reported_at)}</div>
                 `);
                 markers.push(marker);
@@ -314,13 +314,14 @@
             document.getElementById('liveIndicator').innerHTML = '<span class="status-dot" style="background:currentColor;"></span> Connection lost';
         }
     }
-      
+
     // Focus the map when opened from the new-report board (?lat=..&lng=..)
-const focusParams = new URLSearchParams(location.search);
-if (focusParams.has('lat') && focusParams.has('lng')) {
-    const fLat = parseFloat(focusParams.get('lat')), fLng = parseFloat(focusParams.get('lng'));
-    if (!isNaN(fLat) && !isNaN(fLng)) liveMap.setView([fLat, fLng], 17);
-}
+    const focusParams = new URLSearchParams(location.search);
+    if (focusParams.has('lat') && focusParams.has('lng')) {
+        const fLat = parseFloat(focusParams.get('lat')), fLng = parseFloat(focusParams.get('lng'));
+        if (!isNaN(fLat) && !isNaN(fLng)) liveMap.setView([fLat, fLng], 17);
+    }
+
     fetchIncidents();
     setInterval(fetchIncidents, 10000); // poll every 10 seconds
 

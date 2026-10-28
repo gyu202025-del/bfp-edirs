@@ -52,10 +52,11 @@ class ReportApiController extends Controller
 
         $incident = Incident::create($data);
 
-        $heads = User::where('role', 'Head')->where('municipality', $data['municipality'])->get();
-        foreach ($heads as $head) {
+        // Alert the Head and Staff of the municipality where the incident happened
+        $recipients = User::whereIn('role', ['Head', 'Staff'])->where('municipality', $data['municipality'])->get();
+        foreach ($recipients as $recipient) {
             Notification::create([
-                'user_id' => $head->id,
+                'user_id' => $recipient->id,
                 'incident_id' => $incident->id,
                 'title' => 'New ' . $incident->category . ' Report',
                 'message' => $incident->incident_number . ' — ' . ($incident->landmark ?: $incident->barangay) . ', ' . $incident->municipality,

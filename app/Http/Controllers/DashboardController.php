@@ -10,7 +10,7 @@ class DashboardController extends Controller
 {
     public function index()
     {
-        $municipality = auth()->user()->role === 'Head' ? auth()->user()->municipality : null;
+        $municipality = auth()->user()->isMunicipalStaff() ? auth()->user()->municipality : null;
 
         $incidentsQuery = fn () => Incident::when($municipality, fn ($q) => $q->where('municipality', $municipality));
         $dispatchQuery = fn () => Dispatch::whereHas('incident', fn ($q) => $q->when($municipality, fn ($qq) => $qq->where('municipality', $municipality)));
@@ -24,7 +24,7 @@ class DashboardController extends Controller
             ],
             [
                 'label' => 'Active Dispatch',
-                'value' => $dispatchQuery()->whereIn('status', ['Pending', 'Responding'])->count(),
+                'value' => $dispatchQuery()->where('status', 'Pending')->count(),
                 'icon' => 'bi-truck', 'bg' => '#DCEBFF', 'fg' => '#1565C0',
             ],
             [

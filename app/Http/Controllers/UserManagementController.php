@@ -9,18 +9,25 @@ use Illuminate\Validation\Rule;
 
 class UserManagementController extends Controller
 {
+    private const MUNICIPAL_ROLES = ['Head', 'Staff'];
+
     private function isAdmin(): bool
     {
         return auth()->user()->role === 'Administrator';
     }
 
-    // Admin: everyone. Head: only Head accounts of own municipality.
+    private function roleOptions(): array
+    {
+        return $this->isAdmin() ? ['Administrator', 'Head', 'Staff'] : self::MUNICIPAL_ROLES;
+    }
+
+    // Admin: everyone. Head: Head and Staff accounts of own municipality only.
     private function visibleQuery()
     {
         $me = auth()->user();
         $q = User::query();
         if (!$this->isAdmin()) {
-            $q->where('role', 'Head')->where('municipality', $me->municipality);
+            $q->whereIn('role', self::MUNICIPAL_ROLES)->where('municipality', $me->municipality);
         }
         return $q;
     }
@@ -31,17 +38,33 @@ class UserManagementController extends Controller
             return;
         }
         $me = auth()->user();
-        abort_unless($user->role === 'Head' && $user->municipality === $me->municipality, 403);
+        abort_unless(
+            in_array($user->role, self::MUNICIPAL_ROLES, true) && $user->municipality === $me->municipality,
+            403
+        );
+    }
+
+    private function activeAdminCount(): int
+    {
+        return User::where('role', 'Administrator')->where('status', 'Active')->count();
     }
 
     public function index(Request $request)
     {
-        $users = $this->visibleQuery()
+        // Only the Administrator can look at deleted accounts
+        $showDeleted = $this->isAdmin() && $request->boolean('deleted');
+
+        $query = $this->visibleQuery();
+        if ($showDeleted) {
+            $query->onlyTrashed();
+        }
+
+        $users = $query
             ->when($request->filled('q'), function ($q) use ($request) {
                 $term = '%' . $request->q . '%';
                 $q->where(fn ($w) => $w->where('name', 'like', $term)->orWhere('email', 'like', $term));
             })
-            ->when($request->filled('status'), fn ($q) => $q->where('status', $request->status))
+            ->when(!$showDeleted && $request->filled('status'), fn ($q) => $q->where('status', $request->status))
             ->orderBy('role')->orderBy('municipality')->orderBy('name')
             ->paginate(15)
             ->withQueryString();
@@ -49,6 +72,8 @@ class UserManagementController extends Controller
         return view('users.index', [
             'users'          => $users,
             'isAdmin'        => $this->isAdmin(),
+            'showDeleted'    => $showDeleted,
+            'roleOptions'    => $this->roleOptions(),
             'municipalities' => config('leyte.municipalities', []),
             'myMunicipality' => auth()->user()->municipality,
         ]);
@@ -63,18 +88,20 @@ class UserManagementController extends Controller
             'email'    => 'required|email|max:255|unique:users,email',
             'phone'    => 'nullable|string|max:30',
             'password' => 'required|string|min:8|max:100',
+            'role'     => ['required', Rule::in($this->roleOptions())],
         ];
         if ($this->isAdmin()) {
-            $rules['role']         = ['required', Rule::in(['Administrator', 'Head'])];
-            $rules['municipality'] = 'required_if:role,Head|nullable|string|max:100';
+            $rules['municipality'] = [
+                Rule::requiredIf(fn () => in_array($request->input('role'), self::MUNICIPAL_ROLES, true)),
+                'nullable', 'string', 'max:100',
+            ];
         }
         $data = $request->validate($rules);
 
+        $role = $data['role'];
         if ($this->isAdmin()) {
-            $role = $data['role'];
-            $municipality = $role === 'Head' ? $data['municipality'] : null;
+            $municipality = in_array($role, self::MUNICIPAL_ROLES, true) ? $data['municipality'] : null;
         } else {
-            $role = 'Head';
             $municipality = $me->municipality;
         }
 
@@ -88,7 +115,7 @@ class UserManagementController extends Controller
             'status'       => 'Active',
         ]);
 
-        return redirect()->route('users.index')->with('success', 'Account created for ' . $data['name'] . '.');
+        return redirect()->route('users.index')->with('success', 'Account created for ' . $data['name'] . ' (' . $role . ').');
     }
 
     public function update(Request $request, User $user)
@@ -103,8 +130,11 @@ class UserManagementController extends Controller
         ];
         $canChangeRole = $this->isAdmin() && $user->id !== $me->id;
         if ($canChangeRole) {
-            $rules['role']         = ['required', Rule::in(['Administrator', 'Head'])];
-            $rules['municipality'] = 'required_if:role,Head|nullable|string|max:100';
+            $rules['role'] = ['required', Rule::in(['Administrator', 'Head', 'Staff'])];
+            $rules['municipality'] = [
+                Rule::requiredIf(fn () => in_array($request->input('role'), self::MUNICIPAL_ROLES, true)),
+                'nullable', 'string', 'max:100',
+            ];
         }
         $data = $request->validate($rules);
 
@@ -116,14 +146,11 @@ class UserManagementController extends Controller
 
         if ($canChangeRole) {
             // Never leave the system without an active Administrator
-            if ($user->role === 'Administrator' && $data['role'] !== 'Administrator') {
-                $activeAdmins = User::where('role', 'Administrator')->where('status', 'Active')->count();
-                if ($activeAdmins <= 1) {
-                    return back()->withInput()->withErrors(['role' => 'There must be at least one active Administrator.']);
-                }
+            if ($user->role === 'Administrator' && $data['role'] !== 'Administrator' && $this->activeAdminCount() <= 1) {
+                return back()->withInput()->withErrors(['role' => 'There must be at least one active Administrator.']);
             }
             $update['role'] = $data['role'];
-            $update['municipality'] = $data['role'] === 'Head' ? $data['municipality'] : null;
+            $update['municipality'] = in_array($data['role'], self::MUNICIPAL_ROLES, true) ? $data['municipality'] : null;
         }
 
         $user->update($update);
@@ -141,11 +168,8 @@ class UserManagementController extends Controller
 
         $deactivating = $user->status === 'Active';
 
-        if ($deactivating && $user->role === 'Administrator') {
-            $activeAdmins = User::where('role', 'Administrator')->where('status', 'Active')->count();
-            if ($activeAdmins <= 1) {
-                return back()->with('error', 'There must be at least one active Administrator.');
-            }
+        if ($deactivating && $user->role === 'Administrator' && $this->activeAdminCount() <= 1) {
+            return back()->with('error', 'There must be at least one active Administrator.');
         }
 
         $user->update(['status' => $deactivating ? 'Inactive' : 'Active']);
@@ -164,5 +188,35 @@ class UserManagementController extends Controller
         $user->update(['password' => Hash::make($data['password'])]);
 
         return back()->with('success', 'Password reset for ' . $user->name . '. Give them the new temporary password.');
+    }
+
+    // Soft delete: hidden from the list and cannot log in, but history stays intact
+    public function destroy(User $user)
+    {
+        $this->authorizeTarget($user);
+
+        if ($user->id === auth()->id()) {
+            return back()->with('error', 'You cannot delete your own account.');
+        }
+
+        if ($user->role === 'Administrator' && $user->status === 'Active' && $this->activeAdminCount() <= 1) {
+            return back()->with('error', 'There must be at least one active Administrator.');
+        }
+
+        $name = $user->name;
+        $user->delete();
+
+        return redirect()->route('users.index')->with('success', $name . ' was deleted.');
+    }
+
+    // Administrator only
+    public function restore($id)
+    {
+        abort_unless($this->isAdmin(), 403);
+
+        $user = User::onlyTrashed()->findOrFail($id);
+        $user->restore();
+
+        return redirect()->route('users.index', ['deleted' => 1])->with('success', $user->name . ' was restored.');
     }
 }

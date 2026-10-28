@@ -6,15 +6,15 @@
 
 @php
     $statusClass = [
-        'Pending' => 'status-pending', 'Verified' => 'status-verified', 'Dispatched' => 'status-dispatched',
-        'Responding' => 'status-responding', 'Resolved' => 'status-resolved', 'Cancelled' => 'status-cancelled',
+        'Pending' => 'status-pending', 'Dispatched' => 'status-dispatched',
+        'Resolved' => 'status-resolved', 'Cancelled' => 'status-cancelled',
     ];
-    $dispatchStatusClass = ['Pending' => 'dispatch-pending', 'Responding' => 'dispatch-responding', 'Completed' => 'dispatch-completed', 'Cancelled' => 'dispatch-cancelled'];
+    $dispatchStatusClass = ['Pending' => 'dispatch-pending', 'Completed' => 'dispatch-completed', 'Cancelled' => 'dispatch-cancelled'];
 @endphp
 
 <h4 class="fw-semibold mb-1">Welcome, {{ auth()->user()->name }}</h4>
 <p class="text-muted mb-4" style="font-size:.85rem;">
-    @if (auth()->user()->role === 'Head')
+    @if (auth()->user()->isMunicipalStaff())
         Here's what's happening in {{ auth()->user()->municipality }} right now.
     @else
         Here's what's happening across Leyte Province right now.

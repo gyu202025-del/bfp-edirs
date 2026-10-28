@@ -7,10 +7,16 @@
     <div>
         <h4 class="mb-0">User Management</h4>
         <small class="text-muted">
-            {{ $isAdmin ? 'All accounts' : 'Head accounts in ' . $myMunicipality }}
+            @if($showDeleted)
+                Deleted accounts
+            @else
+                {{ $isAdmin ? 'All accounts' : 'Head and Staff accounts in ' . $myMunicipality }}
+            @endif
         </small>
     </div>
-    <button class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#createModal">+ New Account</button>
+    @unless($showDeleted)
+        <button class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#createModal">+ New Account</button>
+    @endunless
 </div>
 
 @if(session('success')) <div class="alert alert-success py-2">{{ session('success') }}</div> @endif
@@ -24,22 +30,36 @@
 {{-- Search --}}
 <form method="GET" class="card card-body mb-3">
     <div class="row g-2">
-        <div class="col-12 col-md-6">
+        <div class="col-12 {{ $isAdmin ? 'col-md-4' : 'col-md-6' }}">
             <input type="text" name="q" value="{{ request('q') }}" class="form-control form-control-sm" placeholder="Search name or email">
         </div>
-        <div class="col-6 col-md-3">
-            <select name="status" class="form-select form-select-sm">
-                <option value="">All status</option>
-                <option value="Active" @selected(request('status') === 'Active')>Active</option>
-                <option value="Inactive" @selected(request('status') === 'Inactive')>Inactive</option>
-            </select>
-        </div>
-        <div class="col-6 col-md-3 d-flex gap-1">
+        @unless($showDeleted)
+            <div class="col-6 col-md-3">
+                <select name="status" class="form-select form-select-sm">
+                    <option value="">All status</option>
+                    <option value="Active" @selected(request('status') === 'Active')>Active</option>
+                    <option value="Inactive" @selected(request('status') === 'Inactive')>Inactive</option>
+                </select>
+            </div>
+        @endunless
+        @if($isAdmin)
+            <div class="col-6 col-md-2">
+                <select name="deleted" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <option value="0" @selected(!$showDeleted)>Current</option>
+                    <option value="1" @selected($showDeleted)>Deleted</option>
+                </select>
+            </div>
+        @endif
+        <div class="col-12 col-md-3 d-flex gap-1">
             <button class="btn btn-sm btn-primary flex-fill">Search</button>
             <a href="{{ route('users.index') }}" class="btn btn-sm btn-outline-secondary flex-fill">Reset</a>
         </div>
     </div>
 </form>
+
+@php
+    $roleBadge = ['Administrator' => 'bg-dark', 'Head' => 'bg-primary', 'Staff' => 'bg-info text-dark'];
+@endphp
 
 <div class="card">
     <div class="table-responsive">
@@ -47,7 +67,7 @@
             <thead class="table-light">
                 <tr>
                     <th>Name</th><th>Email</th><th>Role</th><th>Municipality</th>
-                    <th>Phone</th><th>Status</th><th class="text-end">Actions</th>
+                    <th>Phone</th><th>{{ $showDeleted ? 'Deleted on' : 'Status' }}</th><th class="text-end">Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -56,32 +76,48 @@
                     <tr>
                         <td>{{ $u->name }} @if($isSelf)<span class="badge bg-secondary">You</span>@endif</td>
                         <td>{{ $u->email }}</td>
-                        <td><span class="badge {{ $u->role === 'Administrator' ? 'bg-dark' : 'bg-primary' }}">{{ $u->role }}</span></td>
+                        <td><span class="badge {{ $roleBadge[$u->role] ?? 'bg-secondary' }}">{{ $u->role }}</span></td>
                         <td>{{ $u->municipality ?? '—' }}</td>
                         <td>{{ $u->phone ?? '—' }}</td>
                         <td>
-                            <span class="badge {{ $u->status === 'Active' ? 'bg-success' : 'bg-secondary' }}">{{ $u->status }}</span>
+                            @if($showDeleted)
+                                <span class="text-muted small">{{ $u->deleted_at?->format('M d, Y h:i A') }}</span>
+                            @else
+                                <span class="badge {{ $u->status === 'Active' ? 'bg-success' : 'bg-secondary' }}">{{ $u->status }}</span>
+                            @endif
                         </td>
                         <td class="text-end text-nowrap">
-                            <button class="btn btn-sm btn-outline-primary edit-btn"
-                                    data-id="{{ $u->id }}" data-name="{{ $u->name }}" data-email="{{ $u->email }}"
-                                    data-phone="{{ $u->phone }}" data-role="{{ $u->role }}"
-                                    data-municipality="{{ $u->municipality }}" data-self="{{ $isSelf ? 1 : 0 }}">Edit</button>
-                            <button class="btn btn-sm btn-outline-warning reset-btn"
-                                    data-id="{{ $u->id }}" data-name="{{ $u->name }}">Reset Password</button>
-                            @unless($isSelf)
-                                <form method="POST" action="{{ route('users.toggle', $u) }}" class="d-inline"
-                                      onsubmit="return confirm('{{ $u->status === 'Active' ? 'Deactivate' : 'Reactivate' }} {{ addslashes($u->name) }}?')">
+                            @if($showDeleted)
+                                <form method="POST" action="{{ route('users.restore', $u->id) }}" class="d-inline"
+                                      onsubmit="return confirm('Restore {{ addslashes($u->name) }}?')">
                                     @csrf
-                                    <button class="btn btn-sm {{ $u->status === 'Active' ? 'btn-outline-danger' : 'btn-outline-success' }}">
-                                        {{ $u->status === 'Active' ? 'Deactivate' : 'Reactivate' }}
-                                    </button>
+                                    <button class="btn btn-sm btn-outline-success">Restore</button>
                                 </form>
-                            @endunless
+                            @else
+                                <button class="btn btn-sm btn-outline-primary edit-btn"
+                                        data-id="{{ $u->id }}" data-name="{{ $u->name }}" data-email="{{ $u->email }}"
+                                        data-phone="{{ $u->phone }}" data-role="{{ $u->role }}"
+                                        data-municipality="{{ $u->municipality }}" data-self="{{ $isSelf ? 1 : 0 }}">Edit</button>
+                                <button class="btn btn-sm btn-outline-warning reset-btn"
+                                        data-id="{{ $u->id }}" data-name="{{ $u->name }}">Reset Password</button>
+                                @unless($isSelf)
+                                    <form method="POST" action="{{ route('users.toggle', $u) }}" class="d-inline"
+                                          onsubmit="return confirm('{{ $u->status === 'Active' ? 'Deactivate' : 'Reactivate' }} {{ addslashes($u->name) }}?')">
+                                        @csrf
+                                        <button class="btn btn-sm {{ $u->status === 'Active' ? 'btn-outline-secondary' : 'btn-outline-success' }}">
+                                            {{ $u->status === 'Active' ? 'Deactivate' : 'Reactivate' }}
+                                        </button>
+                                    </form>
+                                    <button class="btn btn-sm btn-outline-danger delete-btn"
+                                            data-id="{{ $u->id }}" data-name="{{ $u->name }}" data-role="{{ $u->role }}">Delete</button>
+                                @endunless
+                            @endif
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="7" class="text-center text-muted py-4">No accounts found.</td></tr>
+                    <tr><td colspan="7" class="text-center text-muted py-4">
+                        {{ $showDeleted ? 'No deleted accounts.' : 'No accounts found.' }}
+                    </td></tr>
                 @endforelse
             </tbody>
         </table>
@@ -105,15 +141,16 @@
                 <div class="mb-2"><label class="form-label small">Phone</label>
                     <input name="phone" class="form-control" value="{{ old('_form') === 'create' ? old('phone') : '' }}"></div>
 
-                @if($isAdmin)
-                    <div class="row g-2 mb-2">
-                        <div class="col-6">
-                            <label class="form-label small">Role *</label>
-                            <select name="role" id="createRole" class="form-select">
-                                <option value="Head" @selected(old('role') !== 'Administrator')>Head</option>
-                                <option value="Administrator" @selected(old('role') === 'Administrator')>Administrator</option>
-                            </select>
-                        </div>
+                <div class="row g-2 mb-2">
+                    <div class="{{ $isAdmin ? 'col-6' : 'col-12' }}">
+                        <label class="form-label small">Role *</label>
+                        <select name="role" id="createRole" class="form-select" required>
+                            @foreach($roleOptions as $r)
+                                <option value="{{ $r }}" @selected(old('_form') === 'create' ? old('role') === $r : $r === 'Head')>{{ $r }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    @if($isAdmin)
                         <div class="col-6" id="createMuniWrap">
                             <label class="form-label small">Municipality *</label>
                             <select name="municipality" class="form-select">
@@ -123,12 +160,11 @@
                                 @endforeach
                             </select>
                         </div>
-                    </div>
-                @else
-                    <div class="mb-2 small text-muted">
-                        Role: <strong>Head</strong> &nbsp;|&nbsp; Municipality: <strong>{{ $myMunicipality }}</strong>
-                    </div>
-                @endif
+                    @endif
+                </div>
+                @unless($isAdmin)
+                    <div class="mb-2 small text-muted">Municipality: <strong>{{ $myMunicipality }}</strong></div>
+                @endunless
 
                 <div class="mb-2">
                     <label class="form-label small">Temporary password * (min. 8 characters)</label>
@@ -169,8 +205,9 @@
                         <div class="col-6">
                             <label class="form-label small">Role *</label>
                             <select name="role" id="editRole" class="form-select">
-                                <option value="Head">Head</option>
                                 <option value="Administrator">Administrator</option>
+                                <option value="Head">Head</option>
+                                <option value="Staff">Staff</option>
                             </select>
                         </div>
                         <div class="col-6" id="editMuniWrap">
@@ -216,12 +253,38 @@
         </form>
     </div>
 </div>
+
+{{-- Delete confirmation modal --}}
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <form method="POST" id="deleteForm" class="modal-content">
+            @csrf @method('DELETE')
+            <div class="modal-header">
+                <h5 class="modal-title text-danger">Delete account</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-2">Are you sure you want to delete <strong id="deleteName"></strong> (<span id="deleteRole"></span>)?</p>
+                <div class="small text-muted">
+                    The account will be removed from the list and can no longer log in.
+                    Past reports and dispatch records are kept.
+                    @if($isAdmin) You can restore it later from the “Deleted” list. @endif
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-danger">Delete</button>
+            </div>
+        </form>
+    </div>
+</div>
 @endsection
 
 @push('scripts')
 <script>
     const updateUrl = @json(route('users.update', ['user' => '__ID__']));
     const resetUrl  = @json(route('users.resetPassword', ['user' => '__ID__']));
+    const deleteUrl = @json(route('users.destroy', ['user' => '__ID__']));
     const isAdmin   = @json($isAdmin);
     const oldInput  = @json(old());
 
@@ -235,11 +298,11 @@
         btn.textContent = show ? 'Hide' : 'Show';
     }));
 
-    // Municipality only matters for Head
+    // Municipality is needed for Head and Staff, not for Administrator
     function bindRole(roleId, wrapId) {
         const role = document.getElementById(roleId), wrap = document.getElementById(wrapId);
         if (!role || !wrap) return;
-        const sync = () => wrap.style.display = role.value === 'Head' ? '' : 'none';
+        const sync = () => wrap.style.display = role.value === 'Administrator' ? 'none' : '';
         role.addEventListener('change', sync);
         sync();
     }
@@ -272,6 +335,13 @@
         document.getElementById('resetName').textContent = btn.dataset.name;
         document.getElementById('resetPassword').value = '';
         modal('resetModal').show();
+    }));
+
+    document.querySelectorAll('.delete-btn').forEach(btn => btn.addEventListener('click', () => {
+        document.getElementById('deleteForm').action = deleteUrl.replace('__ID__', btn.dataset.id);
+        document.getElementById('deleteName').textContent = btn.dataset.name;
+        document.getElementById('deleteRole').textContent = btn.dataset.role;
+        modal('deleteModal').show();
     }));
 
     // Re-open the modal after a validation error

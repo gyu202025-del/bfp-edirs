@@ -31,7 +31,7 @@ class GisMapController extends Controller
     $query = Incident::whereNotIn('status', ['Resolved', 'Cancelled'])
         ->whereNotNull('latitude');
 
-    if (auth()->user()->role === 'Head' && auth()->user()->municipality) {
+    if (auth()->user()->isMunicipalStaff() && auth()->user()->municipality) {
         $municipality = auth()->user()->municipality;
         $query->where(function ($q) use ($municipality) {
             $q->where('municipality', $municipality)

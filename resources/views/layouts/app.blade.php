@@ -124,10 +124,9 @@
         try { sessionStorage.setItem('dismissedReports', JSON.stringify(Array.from(dismissed))); } catch (e) {}
     }
 
-    // ---------------- Audio ----------------
+    // ---------------- Audio (one siren for every category) ----------------
     let audioCtx = null;
     let sirenNodes = null;
-    let beepTimer = null;
 
     function audioReady() {
         return audioCtx && audioCtx.state === 'running';
@@ -152,7 +151,7 @@
         }, { passive: true });
     });
 
-    // Fire: one continuous siren (a tone swept up and down by a slow oscillator)
+    // One continuous siren (a tone swept up and down by a slow oscillator)
     function startSiren() {
         if (sirenNodes || !audioReady()) return;
         const osc = audioCtx.createOscillator();
@@ -182,48 +181,14 @@
         sirenNodes = null;
     }
 
-    // Other categories: a double beep every 8 seconds
-    function playBeepPair() {
-        if (!audioReady()) return;
-        [0, 0.25].forEach(function (delay) {
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.type = 'sine';
-            osc.frequency.value = 880;
-            gain.gain.setValueAtTime(0.25, audioCtx.currentTime + delay);
-            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + delay + 0.2);
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
-            osc.start(audioCtx.currentTime + delay);
-            osc.stop(audioCtx.currentTime + delay + 0.2);
-        });
-    }
-
-    function startBeeps() {
-        if (beepTimer || !audioReady()) return;
-        playBeepPair();
-        beepTimer = setInterval(playBeepPair, 8000);
-    }
-
-    function stopBeeps() {
-        clearInterval(beepTimer);
-        beepTimer = null;
-    }
-
+    // Siren plays while any report is unacknowledged, whatever its category
     function syncSound() {
-        const categories = items.map(function (n) { return n.category; });
-        const hasUnread = categories.length > 0;
-        const hasFire = categories.indexOf('Fire') !== -1;
+        const hasUnread = items.length > 0;
 
-        if (!hasUnread) {
-            stopSiren();
-            stopBeeps();
-        } else if (hasFire) {
-            stopBeeps();
+        if (hasUnread) {
             startSiren();
         } else {
             stopSiren();
-            startBeeps();
         }
 
         const hint = document.getElementById('soundBlockedHint');
@@ -355,7 +320,7 @@
 
     function refreshPageData() {
         // Lists that show incident status need a refresh after dispatching
-        if (['/incidents', '/dispatches', '/dashboard'].indexOf(location.pathname) !== -1) {
+        if (['/incidents', '/dashboard'].indexOf(location.pathname) !== -1) {
             location.reload();
         }
     }

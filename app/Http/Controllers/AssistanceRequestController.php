@@ -44,11 +44,11 @@ class AssistanceRequestController extends Controller
 
         $incident->update(['status' => 'Dispatched']);
 
-        // Notify the responding municipality's Heads — their station is now committed
-        $targetHeads = User::where('role', 'Head')->where('municipality', $candidate['station']->municipality)->get();
-        foreach ($targetHeads as $head) {
+        // Notify the responding municipality's Head and Staff — their station is now committed
+        $recipients = User::whereIn('role', ['Head', 'Staff'])->where('municipality', $candidate['station']->municipality)->get();
+        foreach ($recipients as $recipient) {
             Notification::create([
-                'user_id' => $head->id,
+                'user_id' => $recipient->id,
                 'incident_id' => $incident->id,
                 'title' => 'Mutual Aid — Your Station Is Responding',
                 'message' => $incident->municipality . ' requested backup — ' . $candidate['station']->station_name . ' is now dispatched to ' . $incident->incident_number . ' (' . $incident->category . ').',

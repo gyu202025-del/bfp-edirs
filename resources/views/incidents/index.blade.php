@@ -10,8 +10,8 @@
 
 @php
     $statusClass = [
-        'Pending' => 'status-pending', 'Verified' => 'status-verified', 'Dispatched' => 'status-dispatched',
-        'Responding' => 'status-responding', 'Resolved' => 'status-resolved', 'Cancelled' => 'status-cancelled',
+        'Pending' => 'status-pending', 'Dispatched' => 'status-dispatched',
+        'Resolved' => 'status-resolved', 'Cancelled' => 'status-cancelled',
     ];
 @endphp
 
@@ -25,14 +25,17 @@
 @if (session('success'))
     <div class="alert alert-success py-2" style="font-size:.85rem;">{{ session('success') }}</div>
 @endif
+@if (session('error'))
+    <div class="alert alert-danger py-2" style="font-size:.85rem;">{{ session('error') }}</div>
+@endif
 
 {{-- Filters --}}
 <div class="card-flat p-3 mb-3 d-flex flex-wrap gap-2 align-items-center">
     <input type="text" class="form-control form-control-sm" style="max-width:220px;" placeholder="Search incident no. or location">
     <select class="form-select form-select-sm" style="width:auto;">
         <option>All statuses</option>
-        <option>Pending</option><option>Verified</option><option>Dispatched</option>
-        <option>Responding</option><option>Resolved</option><option>Cancelled</option>
+        <option>Pending</option><option>Dispatched</option>
+        <option>Resolved</option><option>Cancelled</option>
     </select>
     <select class="form-select form-select-sm" style="width:auto;">
         <option>All categories</option>
@@ -86,7 +89,7 @@
     </table>
 </div>
 
-{{-- View / Verify modal --}}
+{{-- View modal --}}
 <div class="modal fade" id="incidentModal" tabindex="-1">
     <div class="modal-dialog modal-lg modal-dialog-scrollable">
         <div class="modal-content">
@@ -126,6 +129,13 @@
             <div class="modal-footer">
                 <span class="status-pill status-pending me-auto" id="modalStatusPill">Pending</span>
 
+                {{-- Only shown for Dispatched incidents --}}
+                <form method="POST" id="resolveForm" style="display:none;"
+                      onsubmit="return confirm('Mark this incident as resolved?')">
+                    @csrf
+                    <button type="submit" class="btn btn-success btn-sm">✔ Mark as Resolved</button>
+                </form>
+
                 <form method="POST" id="cancelForm" style="display:inline;">
                     @csrf
                     <button type="submit" class="btn btn-outline-danger btn-sm">Cancel Report</button>
@@ -157,6 +167,11 @@
 
             document.getElementById('requestAssistanceForm').action = `/incidents/${this.dataset.id}/request-assistance`;
             document.getElementById('cancelForm').action = `/incidents/${this.dataset.id}/cancel`;
+
+            // Resolve button: only for Dispatched incidents
+            document.getElementById('resolveForm').action = `/incidents/${this.dataset.id}/resolve`;
+            document.getElementById('resolveForm').style.display =
+                (this.dataset.status || '').toLowerCase() === 'dispatched' ? 'inline' : 'none';
         });
     });
 
