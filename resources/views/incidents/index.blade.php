@@ -104,8 +104,8 @@
         <div class="modal-content">
             <div class="modal-header">
                 <div>
-                    <h6 class="fw-semibold mb-0" id="modalIncidentNo">—</h6>
-                    <div class="text-secondary" style="font-size:.8rem;" id="modalCategory">—</div>
+                    <h4 class="fw-bold mb-1 text-danger" id="modalCategory">—</h4>
+                    <div class="text-secondary fw-semibold" style="font-size:.85rem;" id="modalIncidentNo">—</div>
                 </div>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
@@ -172,7 +172,9 @@
     document.querySelectorAll('.view-incident-btn').forEach(btn => {
         btn.addEventListener('click', function () {
             document.getElementById('modalIncidentNo').textContent = 'Incident #' + this.dataset.no;
-            document.getElementById('modalCategory').textContent = this.dataset.category;
+            document.getElementById('modalCategory').textContent = this.dataset.category === 'Crime/Security'
+                ? 'Crime'
+                : this.dataset.category;
             document.getElementById('modalLocation').textContent = this.dataset.location || '—';
             document.getElementById('modalLandmark').textContent = this.dataset.landmark || '—';
             document.getElementById('modalDesc').textContent = this.dataset.desc;
@@ -206,12 +208,12 @@
         incidentModalMap = L.map('incidentModalMap').setView([lat, lng], 15);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(incidentModalMap);
         L.circleMarker([lat, lng], { radius: 9, color: '#B3251A', fillColor: '#B3251A', fillOpacity: .85 }).addTo(incidentModalMap);
- 
+
         const incidentId = this.dataset.id;
         const listEl = document.getElementById('nearbyStationsList');
         if (!listEl) return;
         listEl.innerHTML = '<div class="text-secondary" style="font-size:.78rem;">Loading...</div>';
- 
+
         fetch(`/incidents/${incidentId}/nearby-stations`, { headers: { 'Accept': 'application/json' } })
             .then(res => res.json())
             .then(stations => {

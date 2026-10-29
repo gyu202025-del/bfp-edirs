@@ -31,7 +31,7 @@
 
 {{-- Print header --}}
 <div class="d-none d-print-block mb-3 text-center">
-    <h4 class="mb-0">Bureau of Fire Protection — Leyte Provincial Office</h4>
+    <h4 class="mb-0">Emergency Disaster Incident Reporting System (BFP-EDIRS) — Leyte</h4>
     <div>Incident Report Summary</div>
     <small>
         {{ $from->format('M d, Y') }} – {{ $to->format('M d, Y') }}

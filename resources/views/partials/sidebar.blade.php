@@ -1,6 +1,6 @@
 <aside class="sidebar">
     <div class="brand">
-        <div class="logo">🔥</div>
+        <img class="logo" src="{{ asset('images/edirs-logo.png') }}" alt="BFP-EDIRS logo">
         <div class="title">Web GIS Emergency<br>Dispatch System</div>
     </div>
 
@@ -16,7 +16,7 @@
         </a>
         @if(auth()->user()->isAdministrator() || auth()->user()->hasDepartment('BFP'))
             <a href="{{ route('firestations.index') ?? '#' }}" class="nav-link {{ request()->routeIs('firestations.*') ? 'active' : '' }}">
-                <i class="bi bi-building-fill"></i><span>Fire Stations</span>
+                <i class="bi bi-building-fill"></i><span>Station</span>
             </a>
         @endif
         @if(auth()->user()->isAdministrator())
@@ -35,8 +35,5 @@
                 <i class="bi bi-gear-fill"></i><span>Settings</span>
             </a>
         @endif
-        <a href="{{ route('login') ?? '#' }}" class="nav-link logout-link">
-            <i class="bi bi-box-arrow-right"></i><span>Logout</span>
-        </a>
     </nav>
 </aside>

@@ -14,24 +14,24 @@
 <div class="login-shell">
     <div class="login-visual">
         <div class="d-flex align-items-center gap-2 mb-4" style="position:relative; z-index:1;">
-            <div style="width:42px;height:42px;border-radius:10px;background:var(--primary);display:flex;align-items:center;justify-content:center;font-size:1.1rem;">🔥</div>
+            <img class="login-logo" src="{{ asset('images/edirs-logo.png') }}" alt="BFP-EDIRS logo">
             <div>
                 <div class="fw-semibold" style="font-size:1rem;">Web GIS Emergency</div>
                 <div style="font-size:.8rem;opacity:.8;">Dispatch System</div>
             </div>
         </div>
         <h1 class="fw-semibold mb-2" style="max-width:480px; font-size:1.9rem; line-height:1.3; position:relative; z-index:1;">
-            Real-time fire incident response for BFP Leyte
+            Coordinated emergency response across Leyte
         </h1>
         <p style="max-width:440px; opacity:.85; font-size:.9rem; position:relative; z-index:1;">
-            GIS-enabled dispatch, live GPS tracking, and SMS-based reporting across every municipality.
+            One system for fire incidents, crime reports, accidents, and medical emergencies.
         </p>
     </div>
 
     <div class="login-panel">
         <div class="glass-card">
             <div class="text-center mb-4">
-                <div style="width:48px;height:48px;border-radius:12px;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font-size:1.3rem;margin:0 auto .75rem;">🔥</div>
+                <img class="login-card-logo" src="{{ asset('images/edirs-logo.png') }}" alt="BFP-EDIRS logo">
                 <h2 class="fw-semibold mb-0" style="font-size:1.2rem;">BFP Leyte</h2>
                 <div style="font-size:.8rem; opacity:.75;">Web-Based GIS Emergency Dispatch System</div>
             </div>
@@ -60,7 +60,7 @@
             </form>
 
             <p class="text-center mt-4 mb-0" style="font-size:.72rem; opacity:.7;">
-                &copy; Bureau of Fire Protection
+                &copy; Emergency Disaster Incident Reporting System (BFP-EDIRS) — Leyte
             </p>
         </div>
     </div>
