@@ -48,7 +48,7 @@ class Incident extends Model
  
     public function attemptAutoDispatch(): bool
     {
-        if ($this->status !== 'Pending' || !$this->latitude || !$this->longitude) {
+        if ($this->status !== 'Pending' || !$this->latitude || !$this->longitude || $this->dispatch()->exists()) {
             return false;
         }
  

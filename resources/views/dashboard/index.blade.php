@@ -14,7 +14,9 @@
 
 <h4 class="fw-semibold mb-1">Welcome, {{ auth()->user()->name }}</h4>
 <p class="text-muted mb-4" style="font-size:.85rem;">
-    @if (auth()->user()->isMunicipalStaff())
+    @if ($department)
+        {{ $department }} department dashboard — reports for {{ auth()->user()->municipality }}.
+    @elseif (auth()->user()->isMunicipalStaff())
         Here's what's happening in {{ auth()->user()->municipality }} right now.
     @else
         Here's what's happening across Leyte Province right now.

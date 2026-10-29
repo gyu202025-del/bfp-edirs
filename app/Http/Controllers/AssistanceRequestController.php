@@ -12,6 +12,12 @@ class AssistanceRequestController extends Controller
 {
     public function store(Incident $incident)
     {
+        abort_unless(
+            auth()->user()->role === 'Administrator'
+                || (auth()->user()->department === 'BFP' && ($incident->category ?? $incident->incident_type) === 'Fire'),
+            403
+        );
+
         $candidate = FireStation::where('status', 'Active')
             ->where('municipality', '!=', $incident->municipality)
             ->get()
@@ -45,7 +51,10 @@ class AssistanceRequestController extends Controller
         $incident->update(['status' => 'Dispatched']);
 
         // Notify the responding municipality's Head and Staff — their station is now committed
-        $recipients = User::whereIn('role', ['Head', 'Staff'])->where('municipality', $candidate['station']->municipality)->get();
+        $recipients = User::whereIn('role', ['Head', 'Staff'])
+            ->where('department', 'BFP')
+            ->where('municipality', $candidate['station']->municipality)
+            ->get();
         foreach ($recipients as $recipient) {
             Notification::create([
                 'user_id' => $recipient->id,

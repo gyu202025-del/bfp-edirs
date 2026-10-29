@@ -37,6 +37,7 @@ class _ReportFormScreenState extends State<ReportFormScreen> {
   bool autoFilled = false;
 
   String locationStatus = 'Detecting your location...';
+  bool detectingLocation = false;
   File? image;
   bool submitting = false;
 
@@ -47,8 +48,7 @@ class _ReportFormScreenState extends State<ReportFormScreen> {
   }
 
   Future<void> _init() async {
-    await _loadMunicipalities();
-    await _detectLocation();
+    await Future.wait([_loadMunicipalities(), _detectLocation()]);
   }
 
   Future<void> _loadMunicipalities() async {
@@ -59,28 +59,58 @@ class _ReportFormScreenState extends State<ReportFormScreen> {
   }
 
   Future<void> _detectLocation() async {
-    setState(() => locationStatus = 'Detecting your location...');
+    if (!mounted || detectingLocation) return;
+    setState(() {
+      detectingLocation = true;
+      locationStatus = 'Detecting your location...';
+    });
     try {
       var permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
       }
-      if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
-        setState(() => locationStatus = 'Location permission denied. Tap the map to place your pin.');
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        if (mounted) {
+          setState(
+            () => locationStatus =
+                'Location permission denied. Tap the map to place your pin.',
+          );
+        }
         return;
       }
       if (!await Geolocator.isLocationServiceEnabled()) {
-        setState(() => locationStatus = 'GPS is off. Turn it on, or tap the map to place your pin.');
+        if (mounted) {
+          setState(
+            () => locationStatus =
+                'GPS is off. Turn it on, or tap the map to place your pin.',
+          );
+        }
         return;
       }
 
       final pos = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high, timeLimit: Duration(seconds: 15)),
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.bestForNavigation,
+          distanceFilter: 0,
+          timeLimit: Duration(seconds: 30),
+        ),
       );
+      if (!mounted) return;
       _setPoint(LatLng(pos.latitude, pos.longitude), moveMap: true, zoom: 16);
-      setState(() => locationStatus = 'Location detected. Tap the map to adjust the pin.');
+      setState(
+        () => locationStatus =
+            'Location detected. Tap the map to adjust the pin.',
+      );
     } catch (_) {
-      setState(() => locationStatus = 'Could not detect location. Tap the map to place your pin.');
+      if (mounted) {
+        setState(
+          () => locationStatus =
+              'Could not detect location. Tap the map to place your pin.',
+        );
+      }
+    } finally {
+      if (mounted) setState(() => detectingLocation = false);
     }
   }
 
@@ -137,8 +167,9 @@ class _ReportFormScreenState extends State<ReportFormScreen> {
       _snack('Please tap the map to set your location.');
       return;
     }
-    if (selectedMunicipality == null || _barangayController.text.trim().isEmpty || _descriptionController.text.trim().isEmpty) {
-      _snack('Please fill in Municipality, Barangay, and Description.');
+    if (selectedMunicipality == null ||
+        _barangayController.text.trim().isEmpty) {
+      _snack('Please fill in Municipality and Barangay.');
       return;
     }
 
@@ -185,8 +216,15 @@ class _ReportFormScreenState extends State<ReportFormScreen> {
           children: [
             Row(
               children: [
-                Icon(point != null ? Icons.check_circle : Icons.hourglass_top,
-                    color: point != null ? Colors.green : Colors.orange, size: 18),
+                if (detectingLocation)
+                  const SizedBox(
+                    height: 18,
+                    width: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                else
+                  Icon(point != null ? Icons.check_circle : Icons.hourglass_top,
+                      color: point != null ? Colors.green : Colors.orange, size: 18),
                 const SizedBox(width: 8),
                 Expanded(child: Text(locationStatus, style: const TextStyle(fontSize: 12))),
               ],
@@ -268,7 +306,7 @@ class _ReportFormScreenState extends State<ReportFormScreen> {
             Row(
               children: [
                 TextButton.icon(
-                  onPressed: _detectLocation,
+                  onPressed: detectingLocation ? null : _detectLocation,
                   icon: const Icon(Icons.my_location, size: 18),
                   label: const Text('Use my current location'),
                 ),
@@ -301,7 +339,10 @@ class _ReportFormScreenState extends State<ReportFormScreen> {
             TextField(
               controller: _descriptionController,
               maxLines: 3,
-              decoration: const InputDecoration(labelText: "What's happening? *", border: OutlineInputBorder()),
+              decoration: const InputDecoration(
+                labelText: "What's happening? (optional)",
+                border: OutlineInputBorder(),
+              ),
             ),
             const SizedBox(height: 12),
             TextField(

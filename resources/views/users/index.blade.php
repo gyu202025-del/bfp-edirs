@@ -66,7 +66,7 @@
         <table class="table table-sm table-striped align-middle mb-0">
             <thead class="table-light">
                 <tr>
-                    <th>Name</th><th>Email</th><th>Role</th><th>Municipality</th>
+                    <th>Name</th><th>Email</th><th>Role</th><th>Municipality</th><th>Department</th>
                     <th>Phone</th><th>{{ $showDeleted ? 'Deleted on' : 'Status' }}</th><th class="text-end">Actions</th>
                 </tr>
             </thead>
@@ -78,6 +78,7 @@
                         <td>{{ $u->email }}</td>
                         <td><span class="badge {{ $roleBadge[$u->role] ?? 'bg-secondary' }}">{{ $u->role }}</span></td>
                         <td>{{ $u->municipality ?? '—' }}</td>
+                        <td>{{ $u->department ?? '—' }}</td>
                         <td>{{ $u->phone ?? '—' }}</td>
                         <td>
                             @if($showDeleted)
@@ -95,9 +96,12 @@
                                 </form>
                             @else
                                 <button class="btn btn-sm btn-outline-primary edit-btn"
-                                        data-id="{{ $u->id }}" data-name="{{ $u->name }}" data-email="{{ $u->email }}"
+                                        data-id="{{ $u->id }}" data-name="{{ $u->name }}"
+                                        data-first-name="{{ $u->first_name }}" data-middle-initial="{{ $u->middle_initial }}"
+                                        data-surname="{{ $u->surname }}" data-email="{{ $u->email }}"
                                         data-phone="{{ $u->phone }}" data-role="{{ $u->role }}"
-                                        data-municipality="{{ $u->municipality }}" data-self="{{ $isSelf ? 1 : 0 }}">Edit</button>
+                                        data-municipality="{{ $u->municipality }}" data-department="{{ $u->department }}"
+                                        data-self="{{ $isSelf ? 1 : 0 }}">Edit</button>
                                 <button class="btn btn-sm btn-outline-warning reset-btn"
                                         data-id="{{ $u->id }}" data-name="{{ $u->name }}">Reset Password</button>
                                 @unless($isSelf)
@@ -115,7 +119,7 @@
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="7" class="text-center text-muted py-4">
+                    <tr><td colspan="8" class="text-center text-muted py-4">
                         {{ $showDeleted ? 'No deleted accounts.' : 'No accounts found.' }}
                     </td></tr>
                 @endforelse
@@ -134,13 +138,18 @@
             <div class="modal-header"><h5 class="modal-title">New Account</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
             <div class="modal-body">
-                <div class="mb-2"><label class="form-label small">Full name *</label>
-                    <input name="name" class="form-control" value="{{ old('_form') === 'create' ? old('name') : '' }}" required></div>
+                <div class="row g-2 mb-2">
+                    <div class="col-5"><label class="form-label small">First name *</label>
+                        <input name="first_name" class="form-control" value="{{ old('_form') === 'create' ? old('first_name') : '' }}" required></div>
+                    <div class="col-3"><label class="form-label small">Middle initial</label>
+                        <input name="middle_initial" class="form-control" maxlength="5" value="{{ old('_form') === 'create' ? old('middle_initial') : '' }}"></div>
+                    <div class="col-4"><label class="form-label small">Surname *</label>
+                        <input name="surname" class="form-control" value="{{ old('_form') === 'create' ? old('surname') : '' }}" required></div>
+                </div>
                 <div class="mb-2"><label class="form-label small">Email *</label>
                     <input type="email" name="email" class="form-control" value="{{ old('_form') === 'create' ? old('email') : '' }}" required></div>
                 <div class="mb-2"><label class="form-label small">Phone</label>
                     <input name="phone" class="form-control" value="{{ old('_form') === 'create' ? old('phone') : '' }}"></div>
-
                 <div class="row g-2 mb-2">
                     <div class="{{ $isAdmin ? 'col-6' : 'col-12' }}">
                         <label class="form-label small">Role *</label>
@@ -160,10 +169,20 @@
                                 @endforeach
                             </select>
                         </div>
+                        <div class="col-6" id="createDeptWrap">
+                            <label class="form-label small">Department *</label>
+                            <select name="department" class="form-select">
+                                <option value="">Select...</option>
+                                @foreach($departmentOptions as $department)
+                                    <option value="{{ $department }}" @selected(old('_form') === 'create' && old('department') === $department)>{{ $department }}</option>
+                                @endforeach
+                            </select>
+                        </div>
                     @endif
                 </div>
                 @unless($isAdmin)
                     <div class="mb-2 small text-muted">Municipality: <strong>{{ $myMunicipality }}</strong></div>
+                    <div class="mb-2 small text-muted">Department: <strong>{{ auth()->user()->department ?? 'Not assigned — contact an Administrator' }}</strong></div>
                 @endunless
 
                 <div class="mb-2">
@@ -193,8 +212,16 @@
             <div class="modal-header"><h5 class="modal-title">Edit Account</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
             <div class="modal-body">
-                <div class="mb-2"><label class="form-label small">Full name *</label>
-                    <input name="name" id="editName" class="form-control" required></div>
+                <div id="editLegacyNameWrap" class="mb-2"><label class="form-label small">Full name *</label>
+                    <input name="name" id="editName" class="form-control"></div>
+                <div id="editNormalizedNameWrap" class="row g-2 mb-2 d-none">
+                    <div class="col-5"><label class="form-label small">First name *</label>
+                        <input name="first_name" id="editFirstName" class="form-control" disabled></div>
+                    <div class="col-3"><label class="form-label small">Middle initial</label>
+                        <input name="middle_initial" id="editMiddleInitial" class="form-control" maxlength="5" disabled></div>
+                    <div class="col-4"><label class="form-label small">Surname *</label>
+                        <input name="surname" id="editSurname" class="form-control" disabled></div>
+                </div>
                 <div class="mb-2"><label class="form-label small">Email *</label>
                     <input type="email" name="email" id="editEmail" class="form-control" required></div>
                 <div class="mb-2"><label class="form-label small">Phone</label>
@@ -219,8 +246,17 @@
                                 @endforeach
                             </select>
                         </div>
+                        <div class="col-6" id="editDeptWrap">
+                            <label class="form-label small">Department *</label>
+                            <select name="department" id="editDepartment" class="form-select">
+                                <option value="">Select...</option>
+                                @foreach($departmentOptions as $department)
+                                    <option value="{{ $department }}">{{ $department }}</option>
+                                @endforeach
+                            </select>
+                        </div>
                     </div>
-                    <div class="form-text d-none" id="selfNote">You cannot change your own role or municipality.</div>
+                    <div class="form-text d-none" id="selfNote">You cannot change your own role, municipality, or department.</div>
                 @endif
             </div>
             <div class="modal-footer">
@@ -298,30 +334,52 @@
         btn.textContent = show ? 'Hide' : 'Show';
     }));
 
-    // Municipality is needed for Head and Staff, not for Administrator
-    function bindRole(roleId, wrapId) {
-        const role = document.getElementById(roleId), wrap = document.getElementById(wrapId);
-        if (!role || !wrap) return;
-        const sync = () => wrap.style.display = role.value === 'Administrator' ? 'none' : '';
+    // Municipality and department apply to operational accounts, not Administrators.
+    function bindRole(roleId, municipalityWrapId, departmentWrapId) {
+        const role = document.getElementById(roleId);
+        const municipalityWrap = document.getElementById(municipalityWrapId);
+        const departmentWrap = document.getElementById(departmentWrapId);
+        if (!role) return;
+        const sync = () => {
+            const operational = role.value !== 'Administrator';
+            if (municipalityWrap) municipalityWrap.style.display = operational ? '' : 'none';
+            if (departmentWrap) departmentWrap.style.display = operational ? '' : 'none';
+        };
         role.addEventListener('change', sync);
         sync();
     }
-    bindRole('createRole', 'createMuniWrap');
-    bindRole('editRole', 'editMuniWrap');
+    bindRole('createRole', 'createMuniWrap', 'createDeptWrap');
+    bindRole('editRole', 'editMuniWrap', 'editDeptWrap');
 
     function openEdit(d) {
+        const normalized = Boolean(d.firstName && d.surname);
         document.getElementById('editForm').action = updateUrl.replace('__ID__', d.id);
         document.getElementById('editId').value = d.id;
         document.getElementById('editName').value = d.name ?? '';
+        document.getElementById('editName').disabled = normalized;
+        document.getElementById('editName').required = !normalized;
+        document.getElementById('editLegacyNameWrap').classList.toggle('d-none', normalized);
+        document.getElementById('editNormalizedNameWrap').classList.toggle('d-none', !normalized);
+        document.getElementById('editFirstName').disabled = !normalized;
+        document.getElementById('editMiddleInitial').disabled = !normalized;
+        document.getElementById('editSurname').disabled = !normalized;
+        document.getElementById('editFirstName').required = normalized;
+        document.getElementById('editSurname').required = normalized;
+        document.getElementById('editFirstName').value = d.firstName ?? '';
+        document.getElementById('editMiddleInitial').value = d.middleInitial ?? '';
+        document.getElementById('editSurname').value = d.surname ?? '';
         document.getElementById('editEmail').value = d.email ?? '';
         document.getElementById('editPhone').value = d.phone ?? '';
         if (isAdmin) {
             const role = document.getElementById('editRole'), muni = document.getElementById('editMunicipality');
+            const department = document.getElementById('editDepartment');
             role.value = d.role || 'Head';
             muni.value = d.municipality ?? '';
+            department.value = d.department ?? '';
             const self = String(d.self) === '1';
             role.disabled = self;
             muni.disabled = self;
+            department.disabled = self;
             document.getElementById('selfNote').classList.toggle('d-none', !self);
             role.dispatchEvent(new Event('change'));
         }
@@ -352,8 +410,12 @@
         openEdit({
             id: oldInput._id,
             name: oldInput.name, email: oldInput.email, phone: oldInput.phone,
+            firstName: oldInput.first_name ?? (row ? row.dataset.firstName : ''),
+            middleInitial: oldInput.middle_initial ?? (row ? row.dataset.middleInitial : ''),
+            surname: oldInput.surname ?? (row ? row.dataset.surname : ''),
             role: oldInput.role ?? (row ? row.dataset.role : 'Head'),
             municipality: oldInput.municipality ?? (row ? row.dataset.municipality : ''),
+            department: oldInput.department ?? (row ? row.dataset.department : ''),
             self: row ? row.dataset.self : 0,
         });
     }

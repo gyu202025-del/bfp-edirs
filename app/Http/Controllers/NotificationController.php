@@ -58,7 +58,12 @@ class NotificationController extends Controller
 
         $notification->update(['status' => 'Read']);
 
-        if ($notification->incident && $notification->incident->status === 'Pending') {
+        if (
+            auth()->user()->department === 'BFP'
+            && $notification->incident
+            && $notification->incident->status === 'Pending'
+            && ($notification->incident->category ?? $notification->incident->incident_type) === 'Fire'
+        ) {
             $notification->incident->attemptAutoDispatch();
         }
 
@@ -73,7 +78,12 @@ class NotificationController extends Controller
             ->get();
 
         foreach ($notifications as $notification) {
-            if ($notification->incident && $notification->incident->status === 'Pending') {
+            if (
+                auth()->user()->department === 'BFP'
+                && $notification->incident
+                && $notification->incident->status === 'Pending'
+                && ($notification->incident->category ?? $notification->incident->incident_type) === 'Fire'
+            ) {
                 $notification->incident->attemptAutoDispatch();
             }
         }

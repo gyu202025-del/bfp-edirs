@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
  
 use App\Models\Incident;
+use App\Services\IncidentNotificationService;
 use Illuminate\Http\Request;
  
 class ReportController extends Controller
@@ -24,7 +25,7 @@ class ReportController extends Controller
         ]);
     }
  
-    public function store(Request $request)
+    public function store(Request $request, IncidentNotificationService $notifications)
     {
         $data = $request->validate([
             'category' => 'required|in:Fire,Medical,Crime/Security,Accident',
@@ -47,20 +48,7 @@ class ReportController extends Controller
  
         $incident = Incident::create($data);
  
-        // Alert the Head and Staff of the municipality where the incident happened
-        $recipients = \App\Models\User::whereIn('role', ['Head', 'Staff'])
-            ->where('municipality', $data['municipality'])
-            ->get();
- 
-        foreach ($recipients as $recipient) {
-            \App\Models\Notification::create([
-                'user_id' => $recipient->id,
-                'incident_id' => $incident->id,
-                'title' => 'New ' . $incident->category . ' Report',
-                'message' => 'Incident #' . $incident->display_number . ' — ' . ($incident->landmark ?: $incident->location_text),
-                'status' => 'Unread',
-            ]);
-        }
+        $notifications->notifyDepartments($incident);
  
         return view('report.confirmation', ['incident' => $incident]);
     }

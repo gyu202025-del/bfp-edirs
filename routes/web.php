@@ -49,7 +49,10 @@ Route::middleware(['auth', 'role:Administrator,Head,Staff'])->group(function () 
     Route::get('/incidents/{incident}/nearby-stations', [IncidentController::class, 'nearbyStations'])->name('incidents.nearbyStations');
 
     // Fire stations + reports
-    Route::get('/firestations', fn () => view('firestations.index'))->name('firestations.index');
+    Route::get('/firestations', function () {
+        abort_unless(auth()->user()->role === 'Administrator' || auth()->user()->department === 'BFP', 403);
+        return view('firestations.index');
+    })->name('firestations.index');
     Route::get('/reports', [AnalyticsReportController::class, 'index'])->name('reports.index');
 });
 

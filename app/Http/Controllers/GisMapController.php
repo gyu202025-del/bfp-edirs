@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Incident;
+use App\Support\DepartmentRouting;
 
 class GisMapController extends Controller
 {
@@ -37,6 +38,10 @@ class GisMapController extends Controller
             $q->where('municipality', $municipality)
               ->orWhereHas('dispatch.station', fn ($s) => $s->where('municipality', $municipality));
         });
+    }
+
+    if (auth()->user()->isMunicipalStaff()) {
+        DepartmentRouting::filterIncidents($query, auth()->user()->department);
     }
 
     return $query;

@@ -5,15 +5,21 @@ namespace App\Http\Controllers;
 use App\Models\Dispatch;
 use App\Models\FireStation;
 use App\Models\Incident;
+use App\Support\DepartmentRouting;
 
 class DashboardController extends Controller
 {
     public function index()
     {
-        $municipality = auth()->user()->isMunicipalStaff() ? auth()->user()->municipality : null;
+        $user = auth()->user();
+        $municipality = $user->isMunicipalStaff() ? $user->municipality : null;
+        $department = $user->isMunicipalStaff() ? $user->department : null;
 
-        $incidentsQuery = fn () => Incident::when($municipality, fn ($q) => $q->where('municipality', $municipality));
-        $dispatchQuery = fn () => Dispatch::whereHas('incident', fn ($q) => $q->when($municipality, fn ($qq) => $qq->where('municipality', $municipality)));
+        $incidentsQuery = fn () => Incident::when($municipality, fn ($q) => $q->where('municipality', $municipality))
+            ->when($user->isMunicipalStaff(), fn ($q) => DepartmentRouting::filterIncidents($q, $department));
+        $dispatchQuery = fn () => Dispatch::whereHas('incident', fn ($q) => $q
+            ->when($municipality, fn ($qq) => $qq->where('municipality', $municipality))
+            ->when($user->isMunicipalStaff(), fn ($qq) => DepartmentRouting::filterIncidents($qq, $department)));
         $stationsQuery = fn () => FireStation::when($municipality, fn ($q) => $q->where('municipality', $municipality));
 
         $stats = [
@@ -59,6 +65,6 @@ class DashboardController extends Controller
             ->limit(50)
             ->get();
 
-        return view('dashboard.index', compact('stats', 'recentIncidents', 'latestDispatches', 'mapIncidents'));
+        return view('dashboard.index', compact('stats', 'recentIncidents', 'latestDispatches', 'mapIncidents', 'department'));
     }
 }

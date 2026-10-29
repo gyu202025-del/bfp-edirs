@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\AssistanceRequest;
 use App\Models\Dispatch;
 use App\Models\Incident;
+use App\Support\DepartmentRouting;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 
@@ -31,6 +32,7 @@ class AnalyticsReportController extends Controller
                     $w->where('municipality', $user->municipality)
                       ->orWhereHas('dispatch.station', fn ($s) => $s->where('municipality', $user->municipality));
                 });
+                DepartmentRouting::filterIncidents($q, $user->department);
             })
             ->when($isAdmin && $municipality, fn ($q) => $q->where('municipality', $municipality))
             ->with('dispatch.station')
@@ -81,7 +83,9 @@ class AnalyticsReportController extends Controller
             'mutual_aid'  => $mutualAid,
         ];
 
-        $categories     = Incident::whereNotNull('category')->distinct()->pluck('category');
+        $categories = $isAdmin
+            ? Incident::whereNotNull('category')->distinct()->pluck('category')
+            : collect(DepartmentRouting::categoriesFor($user->department));
         $municipalities = config('leyte.municipalities', []);
         $statuses       = ['Pending', 'Dispatched', 'Resolved', 'Cancelled'];
 

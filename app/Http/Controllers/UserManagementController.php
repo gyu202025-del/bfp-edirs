@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Support\DepartmentRouting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
@@ -74,6 +75,7 @@ class UserManagementController extends Controller
             'isAdmin'        => $this->isAdmin(),
             'showDeleted'    => $showDeleted,
             'roleOptions'    => $this->roleOptions(),
+            'departmentOptions' => DepartmentRouting::options(),
             'municipalities' => config('leyte.municipalities', []),
             'myMunicipality' => auth()->user()->municipality,
         ]);
@@ -84,13 +86,19 @@ class UserManagementController extends Controller
         $me = auth()->user();
 
         $rules = [
-            'name'     => 'required|string|max:255',
+            'first_name' => 'required|string|max:100',
+            'middle_initial' => 'nullable|string|max:5',
+            'surname' => 'required|string|max:100',
             'email'    => 'required|email|max:255|unique:users,email',
             'phone'    => 'nullable|string|max:30',
             'password' => 'required|string|min:8|max:100',
             'role'     => ['required', Rule::in($this->roleOptions())],
         ];
         if ($this->isAdmin()) {
+            $rules['department'] = [
+                Rule::requiredIf(fn () => in_array($request->input('role'), self::MUNICIPAL_ROLES, true)),
+                'nullable', Rule::in(DepartmentRouting::options()),
+            ];
             $rules['municipality'] = [
                 Rule::requiredIf(fn () => in_array($request->input('role'), self::MUNICIPAL_ROLES, true)),
                 'nullable', 'string', 'max:100',
@@ -99,23 +107,34 @@ class UserManagementController extends Controller
         $data = $request->validate($rules);
 
         $role = $data['role'];
+        $department = $this->isAdmin()
+            ? (in_array($role, self::MUNICIPAL_ROLES, true) ? $data['department'] : null)
+            : $me->department;
+        if (in_array($role, self::MUNICIPAL_ROLES, true) && !in_array($department, DepartmentRouting::options(), true)) {
+            return back()->withInput()->withErrors(['department' => 'Assign a department to your account before creating department accounts.']);
+        }
         if ($this->isAdmin()) {
             $municipality = in_array($role, self::MUNICIPAL_ROLES, true) ? $data['municipality'] : null;
         } else {
             $municipality = $me->municipality;
         }
+        $name = $this->formatName($data['first_name'], $data['middle_initial'] ?? null, $data['surname']);
 
         User::create([
-            'name'         => $data['name'],
+            'name'         => $name,
+            'first_name'   => $data['first_name'],
+            'middle_initial' => $data['middle_initial'] ?? null,
+            'surname'      => $data['surname'],
             'email'        => $data['email'],
             'phone'        => $data['phone'] ?? null,
+            'department'   => $department,
             'password'     => Hash::make($data['password']),
             'role'         => $role,
             'municipality' => $municipality,
             'status'       => 'Active',
         ]);
 
-        return redirect()->route('users.index')->with('success', 'Account created for ' . $data['name'] . ' (' . $role . ').');
+        return redirect()->route('users.index')->with('success', 'Account created for ' . $name . ' (' . $role . ').');
     }
 
     public function update(Request $request, User $user)
@@ -124,13 +143,20 @@ class UserManagementController extends Controller
         $me = auth()->user();
 
         $rules = [
-            'name'  => 'required|string|max:255',
+            'name'  => 'nullable|required_without:first_name|string|max:255',
+            'first_name' => 'nullable|required_with:surname|string|max:100',
+            'middle_initial' => 'nullable|string|max:5',
+            'surname' => 'nullable|required_with:first_name|string|max:100',
             'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
             'phone' => 'nullable|string|max:30',
         ];
         $canChangeRole = $this->isAdmin() && $user->id !== $me->id;
         if ($canChangeRole) {
             $rules['role'] = ['required', Rule::in(['Administrator', 'Head', 'Staff'])];
+            $rules['department'] = [
+                Rule::requiredIf(fn () => in_array($request->input('role'), self::MUNICIPAL_ROLES, true)),
+                'nullable', Rule::in(DepartmentRouting::options()),
+            ];
             $rules['municipality'] = [
                 Rule::requiredIf(fn () => in_array($request->input('role'), self::MUNICIPAL_ROLES, true)),
                 'nullable', 'string', 'max:100',
@@ -139,10 +165,18 @@ class UserManagementController extends Controller
         $data = $request->validate($rules);
 
         $update = [
-            'name'  => $data['name'],
+            'name'  => isset($data['first_name'])
+                ? $this->formatName($data['first_name'], $data['middle_initial'] ?? null, $data['surname'])
+                : $data['name'],
             'email' => $data['email'],
             'phone' => $data['phone'] ?? null,
         ];
+
+        if (isset($data['first_name'])) {
+            $update['first_name'] = $data['first_name'];
+            $update['middle_initial'] = $data['middle_initial'] ?? null;
+            $update['surname'] = $data['surname'];
+        }
 
         if ($canChangeRole) {
             // Never leave the system without an active Administrator
@@ -151,6 +185,7 @@ class UserManagementController extends Controller
             }
             $update['role'] = $data['role'];
             $update['municipality'] = in_array($data['role'], self::MUNICIPAL_ROLES, true) ? $data['municipality'] : null;
+            $update['department'] = in_array($data['role'], self::MUNICIPAL_ROLES, true) ? $data['department'] : null;
         }
 
         $user->update($update);
@@ -218,5 +253,14 @@ class UserManagementController extends Controller
         $user->restore();
 
         return redirect()->route('users.index', ['deleted' => 1])->with('success', $user->name . ' was restored.');
+    }
+
+    private function formatName(string $firstName, ?string $middleInitial, string $surname): string
+    {
+        return implode(' ', array_filter([
+            trim($firstName),
+            $middleInitial ? trim($middleInitial) : null,
+            trim($surname),
+        ]));
     }
 }

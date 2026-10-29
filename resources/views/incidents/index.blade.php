@@ -99,10 +99,12 @@
             </div>
  
             <div class="px-3 pt-3">
-                <form method="POST" id="requestAssistanceForm">
-                    @csrf
-                    <button type="submit" class="btn btn-outline-warning btn-sm w-100">🤝 Backup Request</button>
-                </form>
+                @if(auth()->user()->role === 'Administrator' || auth()->user()->department === 'BFP')
+                    <form method="POST" id="requestAssistanceForm">
+                        @csrf
+                        <button type="submit" class="btn btn-outline-warning btn-sm w-100">🤝 Backup Request</button>
+                    </form>
+                @endif
             </div>
  
             <div class="modal-body">
@@ -112,10 +114,12 @@
                         <div class="mb-2"><span class="text-secondary" style="font-size:.78rem;">Landmark</span><div id="modalLandmark">—</div></div>
                         <div class="mb-3"><span class="text-secondary" style="font-size:.78rem;">Description</span><div id="modalDesc">—</div></div>
  
-                        <span class="text-secondary" style="font-size:.78rem;">Nearby Stations</span>
-                        <div id="nearbyStationsList" style="font-size:.82rem; max-height:150px; overflow-y:auto;">
-                            <div class="text-secondary" style="font-size:.78rem;">Loading...</div>
-                        </div>
+                        @if(auth()->user()->role === 'Administrator' || auth()->user()->department === 'BFP')
+                            <span class="text-secondary" style="font-size:.78rem;">Nearby Stations</span>
+                            <div id="nearbyStationsList" style="font-size:.82rem; max-height:150px; overflow-y:auto;">
+                                <div class="text-secondary" style="font-size:.78rem;">Loading...</div>
+                            </div>
+                        @endif
                     </div>
                     <div class="col-md-6">
                         <div id="incidentModalMap" class="gis-map"></div>
@@ -160,7 +164,8 @@
             document.getElementById('incidentModal').dataset.lng = lng;
             document.getElementById('incidentModal').dataset.id = this.dataset.id;
  
-            document.getElementById('requestAssistanceForm').action = `/incidents/${this.dataset.id}/request-assistance`;
+            const assistanceForm = document.getElementById('requestAssistanceForm');
+            if (assistanceForm) assistanceForm.action = `/incidents/${this.dataset.id}/request-assistance`;
             document.getElementById('cancelForm').action = `/incidents/${this.dataset.id}/cancel`;
  
             // Resolve button: only for Dispatched incidents
@@ -179,6 +184,7 @@
  
         const incidentId = this.dataset.id;
         const listEl = document.getElementById('nearbyStationsList');
+        if (!listEl) return;
         listEl.innerHTML = '<div class="text-secondary" style="font-size:.78rem;">Loading...</div>';
  
         fetch(`/incidents/${incidentId}/nearby-stations`, { headers: { 'Accept': 'application/json' } })

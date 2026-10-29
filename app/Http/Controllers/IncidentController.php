@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Dispatch;
 use App\Models\FireStation;
 use App\Models\Incident;
+use App\Support\DepartmentRouting;
  
 class IncidentController extends Controller
 {
@@ -19,6 +20,9 @@ class IncidentController extends Controller
                   ->orWhereHas('dispatch.station', fn ($s) => $s->where('municipality', $municipality));
             });
         }
+        if (auth()->user()->isMunicipalStaff()) {
+            DepartmentRouting::filterIncidents($query, auth()->user()->department);
+        }
  
         return view('incidents.index', ['incidents' => $query->get()]);
     }
@@ -31,7 +35,12 @@ class IncidentController extends Controller
         if ($user->role === 'Administrator') {
             return;
         }
- 
+
+        abort_unless(
+            in_array($incident->category ?? $incident->incident_type, DepartmentRouting::categoriesFor($user->department), true),
+            403
+        );
+
         $own    = $incident->municipality === $user->municipality;
         $backup = optional(optional($incident->dispatch)->station)->municipality === $user->municipality;
  

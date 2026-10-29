@@ -4,8 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Incident;
-use App\Models\Notification;
-use App\Models\User;
+use App\Services\IncidentNotificationService;
 use Illuminate\Http\Request;
 
 class ReportApiController extends Controller
@@ -25,14 +24,14 @@ class ReportApiController extends Controller
         return response()->json(config('leyte.municipalities'));
     }
 
-    public function store(Request $request)
+    public function store(Request $request, IncidentNotificationService $notifications)
     {
         $data = $request->validate([
             'category' => 'required|in:Fire,Medical,Crime/Security,Accident',
             'municipality' => 'required|string|max:255',
             'barangay' => 'required|string|max:255',
             'landmark' => 'nullable|string|max:255',
-            'description' => 'required|string',
+            'description' => 'nullable|string',
             'latitude' => 'required|numeric',
             'longitude' => 'required|numeric',
             'image' => 'nullable|image|max:5120',
@@ -48,17 +47,7 @@ class ReportApiController extends Controller
 
         $incident = Incident::create($data);
 
-        // Alert the Head and Staff of the municipality where the incident happened
-        $recipients = User::whereIn('role', ['Head', 'Staff'])->where('municipality', $data['municipality'])->get();
-        foreach ($recipients as $recipient) {
-            Notification::create([
-                'user_id' => $recipient->id,
-                'incident_id' => $incident->id,
-                'title' => 'New ' . $incident->category . ' Report',
-                'message' => 'Incident #' . $incident->display_number . ' — ' . ($incident->landmark ?: $incident->location_text),
-                'status' => 'Unread',
-            ]);
-        }
+        $notifications->notifyDepartments($incident);
 
         return response()->json([
             'success' => true,
