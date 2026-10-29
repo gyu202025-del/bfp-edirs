@@ -19,7 +19,7 @@ class UserManagementController extends Controller
 
     private function roleOptions(): array
     {
-        return $this->isAdmin() ? ['Administrator', 'Head', 'Staff', 'Citizen'] : self::MUNICIPAL_ROLES;
+        return $this->isAdmin() ? ['Administrator', 'Head', 'Staff'] : self::MUNICIPAL_ROLES;
     }
 
     // Admin: everyone. Head: Head and Staff accounts of own municipality only.

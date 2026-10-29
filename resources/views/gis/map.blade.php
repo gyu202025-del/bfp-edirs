@@ -44,31 +44,6 @@
     .fullscreen-btn:hover { background: #F5F5F5; }
     .popup-report-date { font-size: .75rem; color: #667085; margin-top: 2px; }
 
-    @keyframes pending-pulse-ring {
-        0%   { transform: scale(1);   opacity: .7; }
-        100% { transform: scale(2.8); opacity: 0; }
-    }
-    .pending-marker-wrap {
-        position: relative;
-        width: 16px;
-        height: 16px;
-    }
-    .pending-marker-dot {
-        position: absolute;
-        inset: 0;
-        border-radius: 50%;
-        border: 2px solid #fff;
-        box-shadow: 0 2px 6px rgba(0,0,0,.35);
-        z-index: 2;
-    }
-    .pending-marker-ring {
-        position: absolute;
-        inset: 0;
-        border-radius: 50%;
-        border: 2px solid currentColor;
-        animation: pending-pulse-ring 1.6s ease-out infinite;
-        z-index: 1;
-    }
 </style>
 @endpush
 
@@ -123,8 +98,8 @@
         </div>
         <div class="fw-semibold mb-1" style="font-size:.75rem;">Marker stage</div>
         <div class="d-flex flex-column gap-1">
-            <div><span class="legend-swatch" style="background:#888;"></span> Pending — pulsing dot</div>
-            <div>🔥 Dispatched onward — icon shown</div>
+            <div>🚨 Pending — pulsing incident emoji</div>
+            <div>Incident emoji shown — dispatched onward</div>
         </div>
     </div>
 </div>
@@ -191,35 +166,28 @@
 
     function makeIcon(category, status) {
         const bg = categoryColors[category] || '#667085';
+        const emoji = categoryIcons[category] || '📍';
         const isPending = status === 'pending';
-
-        if (isPending) {
+        if (!isPending) {
             return L.divIcon({
                 className: '',
-                html: `
-                    <div class="pending-marker-wrap" style="color:${bg};">
-                        <div class="pending-marker-ring"></div>
-                        <div class="pending-marker-dot" style="background:${bg};"></div>
-                    </div>
-                `,
-                iconSize: [16, 16],
-                iconAnchor: [8, 8],
-                popupAnchor: [0, -8],
+                html: `<div style="
+                    width: 34px; height: 34px; border-radius: 50%;
+                    background: ${bg}; border: 2px solid #fff;
+                    display: flex; align-items: center; justify-content: center;
+                    font-size: 16px; box-shadow: 0 2px 6px rgba(0,0,0,.35);
+                " role="img" aria-label="${category} incident">${emoji}</div>`,
+                iconSize: [34, 34],
+                iconAnchor: [17, 17],
+                popupAnchor: [0, -17],
             });
         }
-
-        const emoji = categoryIcons[category] || '📍';
         return L.divIcon({
             className: '',
-            html: `<div style="
-                width: 34px; height: 34px; border-radius: 50%;
-                background: ${bg}; border: 2px solid #fff;
-                display: flex; align-items: center; justify-content: center;
-                font-size: 16px; box-shadow: 0 2px 6px rgba(0,0,0,.35);
-            ">${emoji}</div>`,
-            iconSize: [34, 34],
-            iconAnchor: [17, 17],
-            popupAnchor: [0, -17],
+            html: `<div class="incident-alert-marker is-pending" style="--incident-color:${bg}" role="img" aria-label="${category} incident"><span class="incident-alert-emoji">${emoji}</span></div>`,
+            iconSize: [40, 40],
+            iconAnchor: [20, 20],
+            popupAnchor: [0, -20],
         });
     }
 

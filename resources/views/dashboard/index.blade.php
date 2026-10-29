@@ -106,11 +106,22 @@
 
     function makeIcon(category, status) {
         const bg = categoryColors[category] || '#667085';
-        if (status === 'pending') {
-            return L.divIcon({ className: '', html: `<div style="width:16px;height:16px;border-radius:50%;background:${bg};border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.35);"></div>`, iconSize: [16, 16], iconAnchor: [8, 8] });
-        }
         const emoji = categoryIcons[category] || '📍';
-        return L.divIcon({ className: '', html: `<div style="width:30px;height:30px;border-radius:50%;background:${bg};border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-size:14px;box-shadow:0 2px 6px rgba(0,0,0,.35);">${emoji}</div>`, iconSize: [30, 30], iconAnchor: [15, 15] });
+        const pending = status === 'pending';
+        if (!pending) {
+            return L.divIcon({
+                className: '',
+                html: `<div style="width:30px;height:30px;border-radius:50%;background:${bg};border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-size:14px;box-shadow:0 2px 6px rgba(0,0,0,.35);" role="img" aria-label="${category} incident">${emoji}</div>`,
+                iconSize: [30, 30],
+                iconAnchor: [15, 15],
+            });
+        }
+        return L.divIcon({
+            className: '',
+            html: `<div class="incident-alert-marker is-pending" style="--incident-color:${bg}" role="img" aria-label="${category} incident"><span class="incident-alert-emoji">${emoji}</span></div>`,
+            iconSize: [40, 40],
+            iconAnchor: [20, 20],
+        });
     }
 
     const points = @json($dashboardMapPoints);

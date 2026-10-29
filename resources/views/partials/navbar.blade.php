@@ -1,9 +1,23 @@
+@php
+    $currentUser = auth()->user();
+    if ($currentUser?->isAdministrator()) {
+        $dashboardIdentity = ['label' => 'DILG / System Administrator', 'icon' => 'bi-shield-lock-fill', 'theme' => 'admin'];
+    } elseif ($currentUser?->hasDepartment('BFP')) {
+        $dashboardIdentity = ['label' => 'BFP Dashboard', 'icon' => 'bi-fire', 'theme' => 'bfp'];
+    } elseif ($currentUser?->hasDepartment('PNP')) {
+        $dashboardIdentity = ['label' => 'PNP Dashboard', 'icon' => 'bi-shield-fill-check', 'theme' => 'pnp'];
+    } elseif ($currentUser?->hasDepartment('MDRRMO')) {
+        $dashboardIdentity = ['label' => 'MDRRMO Dashboard', 'icon' => 'bi-life-preserver', 'theme' => 'mdrrmo'];
+    } else {
+        $dashboardIdentity = ['label' => 'Emergency Response Dashboard', 'icon' => 'bi-grid-1x2-fill', 'theme' => 'default'];
+    }
+@endphp
 <header class="topnav">
     <div class="nav-left">
         <button class="menu-toggle" id="menuToggle"><i class="bi bi-list"></i></button>
-        <div class="datetime">
-            <strong id="liveDate">Thursday, July 23, 2026</strong>
-            <span id="liveTime">--:--:-- --</span>
+        <div class="dashboard-identity dashboard-identity-{{ $dashboardIdentity['theme'] }}" aria-label="{{ $dashboardIdentity['label'] }}">
+            <span class="dashboard-identity-icon" aria-hidden="true"><i class="bi {{ $dashboardIdentity['icon'] }}"></i></span>
+            <span class="dashboard-identity-label">{{ $dashboardIdentity['label'] }}</span>
         </div>
     </div>
 
@@ -66,12 +80,3 @@
         </div>
     </div>
 </header>
-
-<script>
-    function tickClock() {
-        const now = new Date();
-        document.getElementById('liveTime').textContent = now.toLocaleTimeString();
-    }
-    setInterval(tickClock, 1000);
-    tickClock();
-</script>
