@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
-use App\Support\DepartmentRouting;
+use App\Models\Department;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
@@ -19,7 +19,7 @@ class UserManagementController extends Controller
 
     private function roleOptions(): array
     {
-        return $this->isAdmin() ? ['Administrator', 'Head', 'Staff'] : self::MUNICIPAL_ROLES;
+        return $this->isAdmin() ? ['Administrator', 'Head', 'Staff', 'Citizen'] : self::MUNICIPAL_ROLES;
     }
 
     // Admin: everyone. Head: Head and Staff accounts of own municipality only.
@@ -66,6 +66,7 @@ class UserManagementController extends Controller
                 $q->where(fn ($w) => $w->where('name', 'like', $term)->orWhere('email', 'like', $term));
             })
             ->when(!$showDeleted && $request->filled('status'), fn ($q) => $q->where('status', $request->status))
+            ->with(['departmentRecord', 'roleRecord'])
             ->orderBy('role')->orderBy('municipality')->orderBy('name')
             ->paginate(15)
             ->withQueryString();
@@ -75,7 +76,7 @@ class UserManagementController extends Controller
             'isAdmin'        => $this->isAdmin(),
             'showDeleted'    => $showDeleted,
             'roleOptions'    => $this->roleOptions(),
-            'departmentOptions' => DepartmentRouting::options(),
+            'departmentOptions' => \App\Support\DepartmentRouting::options(),
             'municipalities' => config('leyte.municipalities', []),
             'myMunicipality' => auth()->user()->municipality,
         ]);
@@ -97,7 +98,7 @@ class UserManagementController extends Controller
         if ($this->isAdmin()) {
             $rules['department'] = [
                 Rule::requiredIf(fn () => in_array($request->input('role'), self::MUNICIPAL_ROLES, true)),
-                'nullable', Rule::in(DepartmentRouting::options()),
+                'nullable', Rule::in(\App\Support\DepartmentRouting::options()),
             ];
             $rules['municipality'] = [
                 Rule::requiredIf(fn () => in_array($request->input('role'), self::MUNICIPAL_ROLES, true)),
@@ -107,10 +108,10 @@ class UserManagementController extends Controller
         $data = $request->validate($rules);
 
         $role = $data['role'];
-        $department = $this->isAdmin()
-            ? (in_array($role, self::MUNICIPAL_ROLES, true) ? $data['department'] : null)
-            : $me->department;
-        if (in_array($role, self::MUNICIPAL_ROLES, true) && !in_array($department, DepartmentRouting::options(), true)) {
+        $departmentId = $this->isAdmin()
+            ? (in_array($role, self::MUNICIPAL_ROLES, true) ? Department::where('name', $data['department'])->value('id') : null)
+            : $me->department_id;
+        if (in_array($role, self::MUNICIPAL_ROLES, true) && !$departmentId) {
             return back()->withInput()->withErrors(['department' => 'Assign a department to your account before creating department accounts.']);
         }
         if ($this->isAdmin()) {
@@ -127,7 +128,7 @@ class UserManagementController extends Controller
             'surname'      => $data['surname'],
             'email'        => $data['email'],
             'phone'        => $data['phone'] ?? null,
-            'department'   => $department,
+            'department_id' => $departmentId,
             'password'     => Hash::make($data['password']),
             'role'         => $role,
             'municipality' => $municipality,
@@ -152,10 +153,10 @@ class UserManagementController extends Controller
         ];
         $canChangeRole = $this->isAdmin() && $user->id !== $me->id;
         if ($canChangeRole) {
-            $rules['role'] = ['required', Rule::in(['Administrator', 'Head', 'Staff'])];
+            $rules['role'] = ['required', Rule::in(['Administrator', 'Head', 'Staff', 'Citizen'])];
             $rules['department'] = [
                 Rule::requiredIf(fn () => in_array($request->input('role'), self::MUNICIPAL_ROLES, true)),
-                'nullable', Rule::in(DepartmentRouting::options()),
+                'nullable', Rule::in(\App\Support\DepartmentRouting::options()),
             ];
             $rules['municipality'] = [
                 Rule::requiredIf(fn () => in_array($request->input('role'), self::MUNICIPAL_ROLES, true)),
@@ -185,7 +186,9 @@ class UserManagementController extends Controller
             }
             $update['role'] = $data['role'];
             $update['municipality'] = in_array($data['role'], self::MUNICIPAL_ROLES, true) ? $data['municipality'] : null;
-            $update['department'] = in_array($data['role'], self::MUNICIPAL_ROLES, true) ? $data['department'] : null;
+            $update['department_id'] = in_array($data['role'], self::MUNICIPAL_ROLES, true)
+                ? Department::where('name', $data['department'])->value('id')
+                : null;
         }
 
         $user->update($update);

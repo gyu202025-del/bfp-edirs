@@ -76,7 +76,7 @@
                     <tr>
                         <td>{{ $u->name }} @if($isSelf)<span class="badge bg-secondary">You</span>@endif</td>
                         <td>{{ $u->email }}</td>
-                        <td><span class="badge {{ $roleBadge[$u->role] ?? 'bg-secondary' }}">{{ $u->role }}</span></td>
+                        <td><span class="badge {{ $roleBadge[$u->role] ?? 'bg-secondary' }}">{{ $u->role === 'Administrator' ? 'DILG / System Administrator' : $u->role }}</span></td>
                         <td>{{ $u->municipality ?? '—' }}</td>
                         <td>{{ $u->department ?? '—' }}</td>
                         <td>{{ $u->phone ?? '—' }}</td>
@@ -155,7 +155,7 @@
                         <label class="form-label small">Role *</label>
                         <select name="role" id="createRole" class="form-select" required>
                             @foreach($roleOptions as $r)
-                                <option value="{{ $r }}" @selected(old('_form') === 'create' ? old('role') === $r : $r === 'Head')>{{ $r }}</option>
+                                <option value="{{ $r }}" @selected(old('_form') === 'create' ? old('role') === $r : $r === 'Head')>{{ $r === 'Administrator' ? 'DILG / System Administrator' : $r }}</option>
                             @endforeach
                         </select>
                     </div>
@@ -212,8 +212,11 @@
             <div class="modal-header"><h5 class="modal-title">Edit Account</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
             <div class="modal-body">
-                <div id="editLegacyNameWrap" class="mb-2"><label class="form-label small">Full name *</label>
-                    <input name="name" id="editName" class="form-control"></div>
+                <div id="editLegacyNameWrap" class="mb-2">
+                    <label class="form-label small">Full name *</label>
+                    <input name="name" id="editName" class="form-control">
+                    <button type="button" class="btn btn-link btn-sm px-0" id="editConvertNameButton">Edit as separate name fields</button>
+                </div>
                 <div id="editNormalizedNameWrap" class="row g-2 mb-2 d-none">
                     <div class="col-5"><label class="form-label small">First name *</label>
                         <input name="first_name" id="editFirstName" class="form-control" disabled></div>
@@ -232,9 +235,10 @@
                         <div class="col-6">
                             <label class="form-label small">Role *</label>
                             <select name="role" id="editRole" class="form-select">
-                                <option value="Administrator">Administrator</option>
+                                <option value="Administrator">DILG / System Administrator</option>
                                 <option value="Head">Head</option>
                                 <option value="Staff">Staff</option>
+                                <option value="Citizen">Citizen</option>
                             </select>
                         </div>
                         <div class="col-6" id="editMuniWrap">
@@ -322,9 +326,23 @@
     const resetUrl  = @json(route('users.resetPassword', ['user' => '__ID__']));
     const deleteUrl = @json(route('users.destroy', ['user' => '__ID__']));
     const isAdmin   = @json($isAdmin);
+    const currentUserIsAdmin = @json(auth()->user()->isAdministrator());
     const oldInput  = @json(old());
 
     const modal = id => bootstrap.Modal.getOrCreateInstance(document.getElementById(id));
+
+    document.getElementById('editConvertNameButton').addEventListener('click', () => {
+        document.getElementById('editLegacyNameWrap').classList.add('d-none');
+        document.getElementById('editNormalizedNameWrap').classList.remove('d-none');
+        document.getElementById('editName').disabled = true;
+        document.getElementById('editName').required = false;
+        document.getElementById('editFirstName').disabled = false;
+        document.getElementById('editMiddleInitial').disabled = false;
+        document.getElementById('editSurname').disabled = false;
+        document.getElementById('editFirstName').required = true;
+        document.getElementById('editSurname').required = true;
+        document.getElementById('editFirstName').focus();
+    });
 
     // Show/hide password
     document.querySelectorAll('.toggle-pw').forEach(btn => btn.addEventListener('click', () => {
@@ -341,7 +359,7 @@
         const departmentWrap = document.getElementById(departmentWrapId);
         if (!role) return;
         const sync = () => {
-            const operational = role.value !== 'Administrator';
+            const operational = ['Head', 'Staff'].includes(role.value);
             if (municipalityWrap) municipalityWrap.style.display = operational ? '' : 'none';
             if (departmentWrap) departmentWrap.style.display = operational ? '' : 'none';
         };
@@ -360,6 +378,7 @@
         document.getElementById('editName').required = !normalized;
         document.getElementById('editLegacyNameWrap').classList.toggle('d-none', normalized);
         document.getElementById('editNormalizedNameWrap').classList.toggle('d-none', !normalized);
+        document.getElementById('editConvertNameButton').classList.toggle('d-none', normalized);
         document.getElementById('editFirstName').disabled = !normalized;
         document.getElementById('editMiddleInitial').disabled = !normalized;
         document.getElementById('editSurname').disabled = !normalized;

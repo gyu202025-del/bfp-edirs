@@ -15,7 +15,9 @@ class DepartmentRoutingTest extends TestCase
 
         $this->assertSame(['BFP', 'MDRRMO', 'PNP'], DepartmentRouting::departmentsForCategory('Fire'));
         $this->assertSame(['MDRRMO', 'PNP'], DepartmentRouting::departmentsForCategory('Crime/Security'));
+        $this->assertSame(['MDRRMO', 'PNP'], DepartmentRouting::departmentsForCategory('Crime'));
         $this->assertSame(['MDRRMO', 'PNP'], DepartmentRouting::departmentsForCategory('Accident'));
         $this->assertSame(['MDRRMO'], DepartmentRouting::departmentsForCategory('Medical'));
+        $this->assertSame([], DepartmentRouting::departmentsForCategory('Unknown'));
     }
 }

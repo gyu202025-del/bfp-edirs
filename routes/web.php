@@ -28,14 +28,14 @@ Route::post('/logout', [LoginController::class, 'destroy'])->middleware('auth')-
 
 // Authenticated routes, shared by all roles
 Route::middleware('auth')->group(function () {
-    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
-    Route::get('/gis-map', [GisMapController::class, 'index'])->name('gis.map');
-    Route::get('/api/incidents/live', [GisMapController::class, 'live'])->name('gis.live');
+    Route::get('/dashboard', [DashboardController::class, 'index'])->middleware('role:Administrator,Head,Staff')->name('dashboard');
+    Route::get('/gis-map', [GisMapController::class, 'index'])->middleware('role:Administrator,Head,Staff')->name('gis.map');
+    Route::get('/api/incidents/live', [GisMapController::class, 'live'])->middleware('role:Administrator,Head,Staff')->name('gis.live');
 
-    Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
-    Route::get('/api/notifications/unread', [NotificationController::class, 'liveUnread'])->name('notifications.liveUnread');
-    Route::post('/notifications/{notification}/read', [NotificationController::class, 'markRead'])->name('notifications.markRead');
-    Route::post('/notifications/read-all', [NotificationController::class, 'markAllRead'])->name('notifications.markAllRead');
+    Route::get('/notifications', [NotificationController::class, 'index'])->middleware('role:Administrator,Head,Staff')->name('notifications.index');
+    Route::get('/api/notifications/unread', [NotificationController::class, 'liveUnread'])->middleware('role:Administrator,Head,Staff')->name('notifications.liveUnread');
+    Route::post('/notifications/{notification}/read', [NotificationController::class, 'markRead'])->middleware('role:Administrator,Head,Staff')->name('notifications.markRead');
+    Route::post('/notifications/read-all', [NotificationController::class, 'markAllRead'])->middleware('role:Administrator,Head,Staff')->name('notifications.markAllRead');
 });
 
 // Administrator + Head + Staff — operational modules
@@ -43,6 +43,7 @@ Route::middleware(['auth', 'role:Administrator,Head,Staff'])->group(function () 
     // Incidents
     Route::get('/incidents', [IncidentController::class, 'index'])->name('incidents.index');
     Route::post('/incidents/{incident}/verify', [IncidentController::class, 'verify'])->name('incidents.verify');
+    Route::post('/incidents/{incident}/acknowledge', [IncidentController::class, 'acknowledge'])->name('incidents.acknowledge');
     Route::post('/incidents/{incident}/cancel', [IncidentController::class, 'cancel'])->name('incidents.cancel');
     Route::post('/incidents/{incident}/resolve', [IncidentController::class, 'resolve'])->name('incidents.resolve');
     Route::post('/incidents/{incident}/request-assistance', [AssistanceRequestController::class, 'store'])->name('assistance.request');
@@ -50,25 +51,21 @@ Route::middleware(['auth', 'role:Administrator,Head,Staff'])->group(function () 
 
     // Fire stations + reports
     Route::get('/firestations', function () {
-        abort_unless(auth()->user()->role === 'Administrator' || auth()->user()->department === 'BFP', 403);
+        abort_unless(auth()->user()->isAdministrator() || auth()->user()->hasDepartment('BFP'), 403);
         return view('firestations.index');
     })->name('firestations.index');
     Route::get('/reports', [AnalyticsReportController::class, 'index'])->name('reports.index');
 });
 
-// Administrator + Head — user management (Staff cannot open it)
-Route::middleware(['auth', 'role:Administrator,Head'])->group(function () {
+// System administrator — user management
+Route::middleware(['auth', 'role:Administrator'])->group(function () {
     Route::get('/users', [UserManagementController::class, 'index'])->name('users.index');
     Route::post('/users', [UserManagementController::class, 'store'])->name('users.store');
     Route::put('/users/{user}', [UserManagementController::class, 'update'])->name('users.update');
     Route::post('/users/{user}/toggle-status', [UserManagementController::class, 'toggleStatus'])->name('users.toggle');
     Route::post('/users/{user}/reset-password', [UserManagementController::class, 'resetPassword'])->name('users.resetPassword');
-});
-
-// Administrator only
-Route::delete('/users/{user}', [UserManagementController::class, 'destroy'])->name('users.destroy');
-Route::post('/users/{id}/restore', [UserManagementController::class, 'restore'])->name('users.restore');
-Route::middleware(['auth', 'role:Administrator'])->group(function () {
+    Route::delete('/users/{user}', [UserManagementController::class, 'destroy'])->name('users.destroy');
+    Route::post('/users/{id}/restore', [UserManagementController::class, 'restore'])->name('users.restore');
     Route::get('/settings', fn () => view('settings.index'))->name('settings.index');
 });
 

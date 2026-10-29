@@ -57,3 +57,26 @@ If you discover a security vulnerability within Laravel, please send an e-mail t
 ## License
 
 The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+
+## BFP-EDIRS operations
+
+The application uses one Laravel backend and one shared database. Run `php artisan migrate` to apply schema updates; the normalization migration preserves legacy full names in `users.name`, maps known department names to canonical department records, and does not create assignments for historical incidents.
+
+Operational accounts use a role (`Head` or `Staff`) separately from a department (`BFP`, `PNP`, or `MDRRMO`). The `Administrator` role is the system/DILG administrator. Department users only see incidents with a persisted assignment to their department; administrators can see all incidents and assignment statuses. New reports are assigned once according to these rules:
+
+| Category | Assigned departments |
+| --- | --- |
+| Fire | BFP, PNP, MDRRMO |
+| Crime/Security | PNP, MDRRMO |
+| Accident | PNP, MDRRMO |
+| Medical | MDRRMO |
+
+For local development, install dependencies with `composer install` and `npm install`, configure `.env`, then run:
+
+```sh
+php artisan migrate
+npm run build
+php artisan serve
+```
+
+Run the test suite with `php artisan test`.

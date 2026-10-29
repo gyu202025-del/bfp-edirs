@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Incident;
 use App\Services\IncidentNotificationService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class ReportApiController extends Controller
 {
@@ -45,9 +46,13 @@ class ReportApiController extends Controller
             $data['image'] = $request->file('image')->store('incidents', 'public');
         }
 
-        $incident = Incident::create($data);
+        $incident = DB::transaction(function () use ($data, $notifications) {
+            $incident = Incident::create($data);
+            $notifications->assignDepartments($incident);
 
-        $notifications->notifyDepartments($incident);
+            return $incident;
+        });
+        $notifications->notifyAssignedDepartments($incident);
 
         return response()->json([
             'success' => true,

@@ -13,8 +13,10 @@ class AssistanceRequestController extends Controller
     public function store(Incident $incident)
     {
         abort_unless(
-            auth()->user()->role === 'Administrator'
-                || (auth()->user()->department === 'BFP' && ($incident->category ?? $incident->incident_type) === 'Fire'),
+            auth()->user()->isAdministrator()
+                || (auth()->user()->hasDepartment('BFP')
+                    && ($incident->category ?? $incident->incident_type) === 'Fire'
+                    && $incident->assignments()->where('department_id', auth()->user()->department_id)->exists()),
             403
         );
 
@@ -51,8 +53,8 @@ class AssistanceRequestController extends Controller
         $incident->update(['status' => 'Dispatched']);
 
         // Notify the responding municipality's Head and Staff — their station is now committed
-        $recipients = User::whereIn('role', ['Head', 'Staff'])
-            ->where('department', 'BFP')
+        $recipients = User::whereHas('roleRecord', fn ($query) => $query->where('scope', 'department'))
+            ->where('department_id', \App\Models\Department::where('name', 'BFP')->value('id'))
             ->where('municipality', $candidate['station']->municipality)
             ->get();
         foreach ($recipients as $recipient) {

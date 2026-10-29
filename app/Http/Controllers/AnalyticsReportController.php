@@ -14,46 +14,51 @@ class AnalyticsReportController extends Controller
     public function index(Request $request)
     {
         $user    = auth()->user();
-        $isAdmin = $user->role === 'Administrator';
+        $isAdmin = $user->isAdministrator();
 
         $from = $request->filled('from') ? Carbon::parse($request->from)->startOfDay() : now()->subDays(29)->startOfDay();
         $to   = $request->filled('to')   ? Carbon::parse($request->to)->endOfDay()     : now()->endOfDay();
 
         $category     = $request->input('category');
         $status       = $request->input('status');
-        $municipality = $isAdmin ? $request->input('municipality') : $user->municipality;
+        $municipality = $isAdmin ? $request->input('municipality') : null;
 
-        $incidents = Incident::query()
+        $incidents = DepartmentRouting::filterAssignedIncidents(Incident::query(), $user)
             ->whereBetween('created_at', [$from, $to])
             ->when($category, fn ($q) => $q->where('category', $category))
-            ->when($status, fn ($q) => $q->where('status', $status))
-            ->when(!$isAdmin, function ($q) use ($user) {
-                $q->where(function ($w) use ($user) {
-                    $w->where('municipality', $user->municipality)
-                      ->orWhereHas('dispatch.station', fn ($s) => $s->where('municipality', $user->municipality));
-                });
-                DepartmentRouting::filterIncidents($q, $user->department);
+            ->when($status, function ($q) use ($isAdmin, $user, $status) {
+                if ($isAdmin) {
+                    $q->where('status', $status);
+                } else {
+                    $q->whereHas('assignments', fn ($assignment) => $assignment
+                        ->where('department_id', $user->department_id)
+                        ->where('status', $status));
+                }
             })
             ->when($isAdmin && $municipality, fn ($q) => $q->where('municipality', $municipality))
-            ->with('dispatch.station')
+            ->with(['dispatch.station', 'assignments' => fn ($q) => $q->where('department_id', $user->department_id)])
             ->latest()
             ->get();
 
         $ids = $incidents->pluck('id');
 
         // Summary cards
+        $statusForIncident = fn ($incident) => $isAdmin
+            ? $incident->status
+            : ($incident->assignments->first()?->status ?? 'Pending');
+        $incidentStatuses = $incidents->mapWithKeys(fn ($incident) => [$incident->id => $statusForIncident($incident)]);
         $summary = [
             'total'      => $incidents->count(),
-            'pending'    => $incidents->where('status', 'Pending')->count(),
-            'active'     => $incidents->where('status', 'Dispatched')->count(),
-            'resolved'   => $incidents->where('status', 'Resolved')->count(),
-            'cancelled'  => $incidents->where('status', 'Cancelled')->count(),
+            'pending'    => $incidentStatuses->filter(fn ($value) => $value === 'Pending')->count(),
+            'active'     => $incidentStatuses->filter(fn ($value) => in_array($value, $isAdmin ? ['Dispatched'] : ['Acknowledged'], true))->count(),
+            'resolved'   => $incidentStatuses->filter(fn ($value) => $value === 'Resolved')->count(),
+            'cancelled'  => $incidentStatuses->filter(fn ($value) => $value === 'Cancelled')->count(),
         ];
 
         // Charts
         $byCategory = $incidents->groupBy(fn ($i) => $i->category ?: 'Unspecified')->map->count()->sortDesc();
         $byMunicipality = $incidents->groupBy(fn ($i) => $i->municipality ?: 'Unspecified')->map->count()->sortDesc()->take(10);
-        $byStatus = $incidents->groupBy('status')->map->count();
+        $byStatus = $incidentStatuses->groupBy(fn ($value) => $value)->map->count();
 
         $perMonth = $from->diffInDays($to) > 31;
         $trend = $incidents
@@ -87,7 +92,9 @@ class AnalyticsReportController extends Controller
             ? Incident::whereNotNull('category')->distinct()->pluck('category')
             : collect(DepartmentRouting::categoriesFor($user->department));
         $municipalities = config('leyte.municipalities', []);
-        $statuses       = ['Pending', 'Dispatched', 'Resolved', 'Cancelled'];
+        $statuses       = $isAdmin
+            ? ['Pending', 'Dispatched', 'Resolved', 'Cancelled']
+            : ['Pending', 'Acknowledged', 'Resolved', 'Cancelled'];
 
         return view('reports.index', compact(
             'incidents', 'summary', 'byCategory', 'byMunicipality', 'byStatus', 'trend',

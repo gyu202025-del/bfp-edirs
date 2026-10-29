@@ -31,7 +31,9 @@ class LoginController extends Controller
             return back()->withErrors(['email' => 'This account has been deactivated.']);
         }
 
-        return redirect()->intended(route('dashboard'));
+        return Auth::user()->isCitizen()
+            ? redirect()->intended(route('report.select'))
+            : redirect()->intended(route('dashboard'));
     }
 
     public function destroy(Request $request)

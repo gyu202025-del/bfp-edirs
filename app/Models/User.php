@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class User extends Authenticatable
 {
@@ -20,7 +21,7 @@ class User extends Authenticatable
         'password',
         'role',
         'municipality',
-        'department',
+        'department_id',
         'phone',
         'profile_picture',
         'status',
@@ -39,15 +40,44 @@ class User extends Authenticatable
         ];
     }
 
+    protected static function booted(): void
+    {
+        static::saving(function (User $user) {
+            if ($user->role && ($user->isDirty('role') || !$user->role_id)) {
+                $user->role_id = Role::where('name', $user->role)->value('id');
+            }
+        });
+    }
+
+    public function roleRecord(): BelongsTo
+    {
+        return $this->belongsTo(Role::class, 'role_id');
+    }
+
+    public function departmentRecord(): BelongsTo
+    {
+        return $this->belongsTo(Department::class, 'department_id');
+    }
+
+    public function getDepartmentAttribute(): ?string
+    {
+        return $this->departmentRecord?->name;
+    }
+
+    public function hasDepartment(string $name): bool
+    {
+        return $this->departmentRecord?->name === $name;
+    }
+
     public function isAdministrator(): bool
     {
-        return $this->role === 'Administrator';
+        return $this->roleRecord?->scope === 'system' && $this->role === 'Administrator';
     }
 
     // "BFP Personnel" no longer exists as a role; kept so older code calling it still works
     public function isBfpPersonnel(): bool
     {
-        return in_array($this->role, ['Head', 'Staff'], true);
+        return $this->isMunicipalStaff() && $this->hasDepartment('BFP');
     }
 
     public function isMunicipalStaff(): bool

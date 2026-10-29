@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Incident;
 use App\Services\IncidentNotificationService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
  
 class ReportController extends Controller
 {
@@ -32,7 +33,7 @@ class ReportController extends Controller
             'municipality' => 'required|string|max:255',
             'barangay' => 'required|string|max:255',
             'landmark' => 'nullable|string|max:255',
-            'description' => 'required|string',
+            'description' => 'nullable|string',
             'latitude' => 'required|numeric',
             'longitude' => 'required|numeric',
             'image' => 'nullable|image|max:5120',
@@ -46,9 +47,13 @@ class ReportController extends Controller
             $data['image'] = $request->file('image')->store('incidents', 'public');
         }
  
-        $incident = Incident::create($data);
- 
-        $notifications->notifyDepartments($incident);
+        $incident = DB::transaction(function () use ($data, $notifications) {
+            $incident = Incident::create($data);
+            $notifications->assignDepartments($incident);
+
+            return $incident;
+        });
+        $notifications->notifyAssignedDepartments($incident);
  
         return view('report.confirmation', ['incident' => $incident]);
     }

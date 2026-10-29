@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Dispatch;
 use App\Models\FireStation;
 use App\Models\Incident;
+use App\Models\IncidentAssignment;
 use App\Support\DepartmentRouting;
 
 class DashboardController extends Controller
@@ -12,15 +13,11 @@ class DashboardController extends Controller
     public function index()
     {
         $user = auth()->user();
-        $municipality = $user->isMunicipalStaff() ? $user->municipality : null;
         $department = $user->isMunicipalStaff() ? $user->department : null;
 
-        $incidentsQuery = fn () => Incident::when($municipality, fn ($q) => $q->where('municipality', $municipality))
-            ->when($user->isMunicipalStaff(), fn ($q) => DepartmentRouting::filterIncidents($q, $department));
-        $dispatchQuery = fn () => Dispatch::whereHas('incident', fn ($q) => $q
-            ->when($municipality, fn ($qq) => $qq->where('municipality', $municipality))
-            ->when($user->isMunicipalStaff(), fn ($qq) => DepartmentRouting::filterIncidents($qq, $department)));
-        $stationsQuery = fn () => FireStation::when($municipality, fn ($q) => $q->where('municipality', $municipality));
+        $incidentsQuery = fn () => DepartmentRouting::filterAssignedIncidents(Incident::query(), $user);
+        $dispatchQuery = fn () => Dispatch::whereHas('incident', fn ($q) => DepartmentRouting::filterAssignedIncidents($q, $user));
+        $stationsQuery = fn () => FireStation::query();
 
         $stats = [
             [
@@ -35,7 +32,9 @@ class DashboardController extends Controller
             ],
             [
                 'label' => 'Fire Stations',
-                'value' => $stationsQuery()->where('status', 'Active')->count(),
+                'value' => $user->isAdministrator() || $user->hasDepartment('BFP')
+                    ? $stationsQuery()->where('status', 'Active')->count()
+                    : 0,
                 'icon' => 'bi-building-fill', 'bg' => '#FFF3CD', 'fg' => '#8A6D00',
             ],
             [
@@ -45,12 +44,16 @@ class DashboardController extends Controller
             ],
             [
                 'label' => 'Resolved This Month',
-                'value' => $incidentsQuery()->where('status', 'Resolved')->whereMonth('updated_at', now()->month)->count(),
+                'value' => $user->isAdministrator()
+                    ? $incidentsQuery()->where('status', 'Resolved')->whereMonth('updated_at', now()->month)->count()
+                    : IncidentAssignment::where('department_id', $user->department_id)->where('status', 'Resolved')->whereMonth('resolved_at', now()->month)->count(),
                 'icon' => 'bi-graph-up', 'bg' => '#E3E0FA', 'fg' => '#5B4BB8',
             ],
             [
                 'label' => 'Pending Reports',
-                'value' => $incidentsQuery()->where('status', 'Pending')->count(),
+                'value' => $user->isAdministrator()
+                    ? $incidentsQuery()->where('status', 'Pending')->count()
+                    : IncidentAssignment::where('department_id', $user->department_id)->where('status', 'Pending')->count(),
                 'icon' => 'bi-hourglass-split', 'bg' => '#F3E6E6', 'fg' => '#E53935',
             ],
         ];

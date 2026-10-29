@@ -3,6 +3,7 @@
 namespace App\Models;
  
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
  
 class Incident extends Model
 {
@@ -45,10 +46,22 @@ class Incident extends Model
     {
         return $this->hasOne(Dispatch::class);
     }
+
+    public function assignments(): HasMany
+    {
+        return $this->hasMany(IncidentAssignment::class);
+    }
  
     public function attemptAutoDispatch(): bool
     {
-        if ($this->status !== 'Pending' || !$this->latitude || !$this->longitude || $this->dispatch()->exists()) {
+        if (
+            $this->status !== 'Pending'
+            || ($this->category ?? $this->incident_type) !== 'Fire'
+            || !$this->assignments()->whereHas('department', fn ($query) => $query->where('name', 'BFP'))->exists()
+            || !$this->latitude
+            || !$this->longitude
+            || $this->dispatch()->exists()
+        ) {
             return false;
         }
  

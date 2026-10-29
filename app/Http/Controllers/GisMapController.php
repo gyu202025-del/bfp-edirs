@@ -27,23 +27,11 @@ class GisMapController extends Controller
         return response()->json($incidents);
     }
 
-   private function scoped()
-{
-    $query = Incident::whereNotIn('status', ['Resolved', 'Cancelled'])
-        ->whereNotNull('latitude');
-
-    if (auth()->user()->isMunicipalStaff() && auth()->user()->municipality) {
-        $municipality = auth()->user()->municipality;
-        $query->where(function ($q) use ($municipality) {
-            $q->where('municipality', $municipality)
-              ->orWhereHas('dispatch.station', fn ($s) => $s->where('municipality', $municipality));
-        });
+    private function scoped()
+    {
+        return DepartmentRouting::filterAssignedIncidents(
+            Incident::whereNotIn('status', ['Resolved', 'Cancelled'])->whereNotNull('latitude'),
+            auth()->user()
+        );
     }
-
-    if (auth()->user()->isMunicipalStaff()) {
-        DepartmentRouting::filterIncidents($query, auth()->user()->department);
-    }
-
-    return $query;
-}
 }

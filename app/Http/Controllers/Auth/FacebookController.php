@@ -29,15 +29,19 @@ class FacebookController extends Controller
                 'email' => $fbUser->getEmail(),
                 'password' => Str::random(24), // unused for social accounts, but column is required
                 'role' => 'Citizen',           // Facebook login is for citizen reporters only
+                'status' => 'Active',
                 'facebook_id' => $fbUser->getId(),
                 'profile_picture' => $fbUser->getAvatar(),
             ]);
+        } elseif (!$user->isCitizen()) {
+            abort(403, 'Facebook login is available for citizen accounts only.');
         } elseif (! $user->facebook_id) {
             $user->update(['facebook_id' => $fbUser->getId()]);
         }
 
+        abort_unless($user->status === 'Active', 403, 'This account has been deactivated.');
         Auth::login($user);
 
-        return redirect()->route('dashboard');
+        return redirect()->route('report.select');
     }
 }

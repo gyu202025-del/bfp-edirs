@@ -14,12 +14,12 @@
         <a href="{{ route('gis.map') ?? '#' }}" class="nav-link {{ request()->routeIs('gis.*') ? 'active' : '' }}">
             <i class="bi bi-geo-alt-fill"></i><span>GIS Map</span>
         </a>
-        @if(auth()->user()->role === 'Administrator' || auth()->user()->department === 'BFP')
+        @if(auth()->user()->isAdministrator() || auth()->user()->hasDepartment('BFP'))
             <a href="{{ route('firestations.index') ?? '#' }}" class="nav-link {{ request()->routeIs('firestations.*') ? 'active' : '' }}">
                 <i class="bi bi-building-fill"></i><span>Fire Stations</span>
             </a>
         @endif
-        @if(in_array(auth()->user()->role, ['Administrator', 'Head']))
+        @if(auth()->user()->isAdministrator())
             <a href="{{ route('users.index') ?? '#' }}" class="nav-link {{ request()->routeIs('users.*') ? 'active' : '' }}">
                 <i class="bi bi-people-fill"></i><span>Users</span>
             </a>
@@ -30,7 +30,7 @@
         <a href="{{ route('notifications.index') ?? '#' }}" class="nav-link {{ request()->routeIs('notifications.*') ? 'active' : '' }}">
             <i class="bi bi-bell-fill"></i><span>Notifications</span>
         </a>
-        @if(auth()->user()->role === 'Administrator')
+        @if(auth()->user()->isAdministrator())
             <a href="{{ route('settings.index') ?? '#' }}" class="nav-link {{ request()->routeIs('settings.*') ? 'active' : '' }}">
                 <i class="bi bi-gear-fill"></i><span>Settings</span>
             </a>

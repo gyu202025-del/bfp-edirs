@@ -9,7 +9,7 @@ class NotificationController extends Controller
 {
     public function index()
     {
-        $notifications = Notification::where('user_id', auth()->id())
+        $notifications = $this->visibleNotifications()
             ->latest('created_at')
             ->get();
 
@@ -18,7 +18,7 @@ class NotificationController extends Controller
 
     public function liveUnread()
     {
-        $notifications = Notification::where('user_id', auth()->id())
+        $notifications = $this->visibleNotifications()
             ->where('status', 'Unread')
             ->with('incident')
             ->latest('created_at')
@@ -54,17 +54,21 @@ class NotificationController extends Controller
 
     public function markRead(Notification $notification)
     {
-        abort_unless($notification->user_id === auth()->id(), 403);
+        abort_unless($this->visibleNotifications()->whereKey($notification->id)->exists(), 403);
 
         $notification->update(['status' => 'Read']);
 
-        if (
-            auth()->user()->department === 'BFP'
-            && $notification->incident
-            && $notification->incident->status === 'Pending'
-            && ($notification->incident->category ?? $notification->incident->incident_type) === 'Fire'
-        ) {
-            $notification->incident->attemptAutoDispatch();
+        $incident = $notification->incident;
+        if ($incident && auth()->user()->department_id) {
+            $assignment = $incident->assignments()
+                ->where('department_id', auth()->user()->department_id)
+                ->first();
+            if ($assignment && $assignment->status === 'Pending') {
+                $assignment->update(['status' => 'Acknowledged', 'acknowledged_at' => now()]);
+                if (auth()->user()->hasDepartment('BFP') && ($incident->category ?? $incident->incident_type) === 'Fire') {
+                    $incident->attemptAutoDispatch();
+                }
+            }
         }
 
         return request()->expectsJson() ? response()->json(['ok' => true]) : back();
@@ -72,24 +76,33 @@ class NotificationController extends Controller
 
     public function markAllRead()
     {
-        $notifications = Notification::where('user_id', auth()->id())
+        $notifications = $this->visibleNotifications()
             ->where('status', 'Unread')
             ->with('incident')
             ->get();
 
         foreach ($notifications as $notification) {
-            if (
-                auth()->user()->department === 'BFP'
-                && $notification->incident
-                && $notification->incident->status === 'Pending'
-                && ($notification->incident->category ?? $notification->incident->incident_type) === 'Fire'
-            ) {
-                $notification->incident->attemptAutoDispatch();
+            $incident = $notification->incident;
+            if ($incident && auth()->user()->department_id) {
+                $assignment = $incident->assignments()
+                    ->where('department_id', auth()->user()->department_id)
+                    ->first();
+                if ($assignment && $assignment->status === 'Pending') {
+                    $assignment->update(['status' => 'Acknowledged', 'acknowledged_at' => now()]);
+                    if (auth()->user()->hasDepartment('BFP') && ($incident->category ?? $incident->incident_type) === 'Fire') {
+                        $incident->attemptAutoDispatch();
+                    }
+                }
             }
         }
 
-        Notification::where('user_id', auth()->id())->update(['status' => 'Read']);
+        Notification::whereIn('id', $notifications->pluck('id'))->update(['status' => 'Read']);
 
         return request()->expectsJson() ? response()->json(['ok' => true]) : back();
+    }
+
+    private function visibleNotifications()
+    {
+        return Notification::visibleTo(auth()->user());
     }
 }

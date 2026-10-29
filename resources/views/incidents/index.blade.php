@@ -48,7 +48,7 @@
         <thead>
             <tr>
                 <th>Incident No.</th><th>Category</th><th>Location</th>
-                <th>Status</th><th>Reported</th><th></th>
+                <th>Incident Status</th><th>Reported</th><th>Department Assignment</th><th></th>
             </tr>
         </thead>
         <tbody>
@@ -63,6 +63,17 @@
                     </span>
                 </td>
                 <td class="text-secondary" style="font-size:.8rem;">{{ $i->reported_at?->format('M d, Y · g:i A') }}</td>
+                <td style="font-size:.78rem;">
+                    @if(auth()->user()->isAdministrator())
+                        @forelse($i->assignments as $assignment)
+                            <span class="badge text-bg-light border">{{ $assignment->department->name }}: {{ $assignment->status }}</span>
+                        @empty
+                            <span class="text-secondary">No department assignment</span>
+                        @endforelse
+                    @else
+                        {{ $myAssignment[$i->id]?->status ?? '—' }}
+                    @endif
+                </td>
                 <td>
                     <button class="btn btn-sm btn-outline-secondary view-incident-btn"
                         data-bs-toggle="modal" data-bs-target="#incidentModal"
@@ -73,6 +84,7 @@
                         data-location="{{ $i->location_text }}"
                         data-landmark="{{ $i->landmark }}"
                         data-status="{{ $i->status }}"
+                        data-assignment-status="{{ $myAssignment[$i->id]?->status ?? '' }}"
                         data-lat="{{ $i->latitude }}"
                         data-lng="{{ $i->longitude }}">
                         View
@@ -80,7 +92,7 @@
                 </td>
             </tr>
         @empty
-            <tr><td colspan="6" class="text-center text-secondary py-4">No incidents reported yet.</td></tr>
+            <tr><td colspan="7" class="text-center text-secondary py-4">No incidents reported yet.</td></tr>
         @endforelse
         </tbody>
     </table>
@@ -99,7 +111,13 @@
             </div>
  
             <div class="px-3 pt-3">
-                @if(auth()->user()->role === 'Administrator' || auth()->user()->department === 'BFP')
+                @unless(auth()->user()->isAdministrator())
+                    <form method="POST" id="acknowledgeForm" class="mb-2">
+                        @csrf
+                        <button type="submit" class="btn btn-outline-primary btn-sm w-100">Acknowledge assignment</button>
+                    </form>
+                @endunless
+                @if(auth()->user()->isAdministrator() || auth()->user()->hasDepartment('BFP'))
                     <form method="POST" id="requestAssistanceForm">
                         @csrf
                         <button type="submit" class="btn btn-outline-warning btn-sm w-100">🤝 Backup Request</button>
@@ -114,7 +132,7 @@
                         <div class="mb-2"><span class="text-secondary" style="font-size:.78rem;">Landmark</span><div id="modalLandmark">—</div></div>
                         <div class="mb-3"><span class="text-secondary" style="font-size:.78rem;">Description</span><div id="modalDesc">—</div></div>
  
-                        @if(auth()->user()->role === 'Administrator' || auth()->user()->department === 'BFP')
+                        @if(auth()->user()->isAdministrator() || auth()->user()->hasDepartment('BFP'))
                             <span class="text-secondary" style="font-size:.78rem;">Nearby Stations</span>
                             <div id="nearbyStationsList" style="font-size:.82rem; max-height:150px; overflow-y:auto;">
                                 <div class="text-secondary" style="font-size:.78rem;">Loading...</div>
@@ -149,6 +167,7 @@
  
 @push('scripts')
 <script>
+    const isAdmin = @json(auth()->user()->isAdministrator());
     let incidentModalMap;
     document.querySelectorAll('.view-incident-btn').forEach(btn => {
         btn.addEventListener('click', function () {
@@ -166,12 +185,18 @@
  
             const assistanceForm = document.getElementById('requestAssistanceForm');
             if (assistanceForm) assistanceForm.action = `/incidents/${this.dataset.id}/request-assistance`;
+            const acknowledgeForm = document.getElementById('acknowledgeForm');
+            if (acknowledgeForm) {
+                acknowledgeForm.action = `/incidents/${this.dataset.id}/acknowledge`;
+                acknowledgeForm.style.display = this.dataset.assignmentStatus === 'Pending' ? 'inline' : 'none';
+            }
             document.getElementById('cancelForm').action = `/incidents/${this.dataset.id}/cancel`;
  
             // Resolve button: only for Dispatched incidents
             document.getElementById('resolveForm').action = `/incidents/${this.dataset.id}/resolve`;
-            document.getElementById('resolveForm').style.display =
-                (this.dataset.status || '').toLowerCase() === 'dispatched' ? 'inline' : 'none';
+            document.getElementById('resolveForm').style.display = isAdmin
+                ? ((this.dataset.status || '').toLowerCase() === 'dispatched' ? 'inline' : 'none')
+                : (this.dataset.assignmentStatus === 'Acknowledged' ? 'inline' : 'none');
         });
     });
  
