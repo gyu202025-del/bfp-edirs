@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../models/incident_category.dart';
 import '../services/api_service.dart';
 import 'report_form_screen.dart';
@@ -30,7 +31,8 @@ class _CategorySelectScreenState extends State<CategorySelectScreen> {
       });
     } catch (e) {
       setState(() {
-        error = 'Could not connect to the server. Check your internet connection.';
+        error =
+            'Could not connect to the server. Check your internet connection.';
         loading = false;
       });
     }
@@ -41,41 +43,78 @@ class _CategorySelectScreenState extends State<CategorySelectScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFF1B263B),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Text('🚨', style: TextStyle(fontSize: 40)),
-              const SizedBox(height: 12),
-              const Text(
-                'What do you want to report?',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Select a category — we\'ll capture your location automatically.',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.white70, fontSize: 13),
-              ),
-              const SizedBox(height: 32),
-              if (loading) const CircularProgressIndicator(color: Colors.white),
-              if (error != null) ...[
-                Text(error!, style: const TextStyle(color: Colors.redAccent), textAlign: TextAlign.center),
-                const SizedBox(height: 12),
-                ElevatedButton(onPressed: () { setState(() { loading = true; error = null; }); _loadCategories(); }, child: const Text('Retry')),
-              ],
-              if (!loading && error == null)
-                GridView.count(
-                  crossAxisCount: 2,
-                  shrinkWrap: true,
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 12,
-                  children: categories.map((c) => _CategoryCard(category: c)).toList(),
+        child: Column(
+          children: [
+            Expanded(
+              child: Center(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text('🚨', style: TextStyle(fontSize: 40)),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'What do you want to report?',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 22,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Select a category — we\'ll capture your location automatically.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: Colors.white70, fontSize: 13),
+                      ),
+                      const SizedBox(height: 32),
+                      if (loading)
+                        const CircularProgressIndicator(color: Colors.white),
+                      if (error != null) ...[
+                        Text(
+                          error!,
+                          style: const TextStyle(color: Colors.redAccent),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 12),
+                        ElevatedButton(
+                          onPressed: () {
+                            setState(() {
+                              loading = true;
+                              error = null;
+                            });
+                            _loadCategories();
+                          },
+                          child: const Text('Retry'),
+                        ),
+                      ],
+                      if (!loading && error == null)
+                        GridView.count(
+                          crossAxisCount: 2,
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          crossAxisSpacing: 12,
+                          mainAxisSpacing: 12,
+                          children: categories
+                              .map((c) => _CategoryCard(category: c))
+                              .toList(),
+                        ),
+                    ],
+                  ),
                 ),
-            ],
-          ),
+              ),
+            ),
+            const Padding(
+              padding: EdgeInsets.fromLTRB(12, 8, 12, 12),
+              child: Text(
+                '© 2026 Emergency Disaster Incident Reporting System — Province of Leyte',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.white54, fontSize: 11),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -93,14 +132,16 @@ class _CategoryCard extends StatelessWidget {
       onTap: () {
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => ReportFormScreen(category: category)),
+          MaterialPageRoute(
+            builder: (_) => ReportFormScreen(category: category),
+          ),
         );
       },
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.08),
+          color: Colors.white.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white.withOpacity(0.15)),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
         ),
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -108,8 +149,17 @@ class _CategoryCard extends StatelessWidget {
           children: [
             Text(category.emoji, style: const TextStyle(fontSize: 34)),
             const SizedBox(height: 8),
-            Text(category.label, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
-            Text(category.agency, style: const TextStyle(color: Colors.white54, fontSize: 11)),
+            Text(
+              category.label,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            Text(
+              category.agency,
+              style: const TextStyle(color: Colors.white54, fontSize: 11),
+            ),
           ],
         ),
       ),

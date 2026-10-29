@@ -1,15 +1,19 @@
 import 'dart:convert';
-import 'dart:io';
+
 import 'package:http/http.dart' as http;
+
 import '../models/incident_category.dart';
 
 class ApiService {
   // Change this to your laptop's local IP (not 127.0.0.1) when testing on
   // a real phone over WiFi — e.g. 'http://192.168.1.5:8000/api'.
   // Use 'http://10.0.2.2:8000/api' if testing on the Android EMULATOR instead.
-  static const String baseUrl = 'https://bfp-edirs-production.up.railway.app/api';
+  static const String baseUrl =
+      'https://bfp-edirs-production.up.railway.app/api';
 
-  static const Map<String, String> _jsonHeaders = {'Accept': 'application/json'};
+  static const Map<String, String> _jsonHeaders = {
+    'Accept': 'application/json',
+  };
 
   static Future<List<IncidentCategory>> fetchCategories() async {
     final res = await http
@@ -23,11 +27,14 @@ class ApiService {
   static Future<List<String>> fetchBarangays(String municipality) async {
     final res = await http
         .get(
-          Uri.parse('$baseUrl/report/barangays').replace(queryParameters: {'municipality': municipality}),
+          Uri.parse('$baseUrl/report/barangays')
+              .replace(queryParameters: {'municipality': municipality}),
           headers: _jsonHeaders,
         )
         .timeout(const Duration(seconds: 15));
-    if (res.statusCode != 200) return [];
+    if (res.statusCode != 200) {
+      throw Exception('Failed to load barangays');
+    }
     return (jsonDecode(res.body) as List).map((e) => e.toString()).toList();
   }
 
@@ -48,31 +55,29 @@ class ApiService {
     required double latitude,
     required double longitude,
     String? landmark,
-    File? image,
   }) async {
-    final uri = Uri.parse('$baseUrl/report');
-    final request = http.MultipartRequest('POST', uri);
-    request.headers['Accept'] = 'application/json';
-
-    request.fields['category'] = category;
-    request.fields['municipality'] = municipality;
-    request.fields['barangay'] = barangay;
-    request.fields['description'] = description;
-    request.fields['latitude'] = latitude.toString();
-    request.fields['longitude'] = longitude.toString();
-    if (landmark != null) request.fields['landmark'] = landmark;
-
-    if (image != null) {
-      request.files.add(await http.MultipartFile.fromPath('image', image.path));
-    }
-
-    final streamedResponse = await request.send().timeout(const Duration(seconds: 60));
-    final response = await http.Response.fromStream(streamedResponse);
+    final response = await http
+        .post(
+          Uri.parse('$baseUrl/report'),
+          headers: {..._jsonHeaders, 'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'category': category,
+            'municipality': municipality,
+            'barangay': barangay,
+            'description': description,
+            'latitude': latitude,
+            'longitude': longitude,
+            'landmark': landmark,
+          }),
+        )
+        .timeout(const Duration(seconds: 60));
 
     if (response.statusCode == 201) {
       return jsonDecode(response.body);
     } else {
-      throw Exception('Submit failed (${response.statusCode}): ${response.body}');
+      throw Exception(
+        'Submit failed (${response.statusCode}): ${response.body}',
+      );
     }
   }
 }
