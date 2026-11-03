@@ -9,7 +9,7 @@
     .map-shell:fullscreen #liveMap { height: 100vh; }
     .map-shell:fullscreen { padding: 0 !important; border-radius: 0 !important; }
     .map-filter-bar {
-        position: absolute; top: 16px; left: 16px; z-index: 500;
+        position: absolute; top: 16px; left: 50%; transform: translateX(-50%); z-index: 500;
         background: var(--card-bg, #fff);
         border: 1px solid var(--border, #E4E7EC);
         border-radius: var(--radius, 10px);
@@ -95,11 +95,6 @@
             <div><span class="legend-swatch" style="background:#0891B2;"></span>🚑 Medical</div>
             <div><span class="legend-swatch" style="background:#1E3A8A;"></span>🚓 Crime/Security</div>
             <div><span class="legend-swatch" style="background:#F59E0B;"></span>⚠️ Accident</div>
-        </div>
-        <div class="fw-semibold mb-1" style="font-size:.75rem;">Marker stage</div>
-        <div class="d-flex flex-column gap-1">
-            <div>🚨 Pending — pulsing incident emoji</div>
-            <div>Incident emoji shown — dispatched onward</div>
         </div>
     </div>
 </div>

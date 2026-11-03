@@ -32,7 +32,7 @@
         <div class="glass-card">
             <div class="text-center mb-4">
                 <img class="login-card-logo" src="{{ asset('images/edirs-logo.png') }}" alt="BFP-EDIRS logo">
-                <h2 class="fw-semibold mb-0" style="font-size:1.2rem;">BFP Leyte</h2>
+                <h2 class="fw-semibold mb-0" style="font-size:1.2rem;">ResQ Leyte</h2>
                 <div style="font-size:.8rem; opacity:.75;">Web-Based GIS Emergency Dispatch System</div>
             </div>
 
@@ -60,7 +60,7 @@
             </form>
 
             <p class="text-center mt-4 mb-0" style="font-size:.72rem; opacity:.7;">
-                &copy; Emergency Disaster Incident Reporting System (BFP-EDIRS) — Leyte
+                &copy; Emergency Disaster Incident Reporting System - Leyte
             </p>
         </div>
     </div>

@@ -77,8 +77,6 @@
                             <dt class="col-4">Barangay</dt>   <dd class="col-8" id="nrBarangay"></dd>
                             <dt class="col-4">Landmark</dt>   <dd class="col-8" id="nrLandmark"></dd>
                             <dt class="col-4">Description</dt><dd class="col-8" id="nrDescription"></dd>
-                            <dt class="col-4">Reporter</dt>   <dd class="col-8" id="nrReporter"></dd>
-                            <dt class="col-4">Contact</dt>    <dd class="col-8" id="nrContact"></dd>
                         </dl>
                     </div>
                     <div class="col-md-6">
@@ -96,7 +94,6 @@
                     <button type="button" class="btn btn-outline-secondary btn-sm" id="nrNext">Next &raquo;</button>
                 </div>
                 <a href="#" id="nrMapLink" class="btn btn-outline-primary btn-sm">View on GIS Map</a>
-                <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">Close</button>
                 <button type="button" class="btn btn-danger btn-sm" id="nrAckBtn">Acknowledge</button>
             </div>
         </div>
@@ -274,8 +271,6 @@
         setText('nrBarangay', inc ? inc.barangay : null);
         setText('nrLandmark', inc ? inc.landmark : null);
         setText('nrDescription', inc ? inc.description : n.message);
-        setText('nrReporter', inc ? inc.reporter_name : null);
-        setText('nrContact', inc ? inc.reporter_contact : null);
 
         const link = document.getElementById('nrMapLink');
         if (inc && inc.latitude && inc.longitude) {
